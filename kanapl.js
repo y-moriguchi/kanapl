@@ -13,6 +13,17 @@
         "-": function(array) {
             return map(array, function(x) { return -x; });
         },
+
+        "×": function(array) {
+            return map(array, function(x) {
+                return x > 0 ? 1 : x < 0 ? -1 : 0;
+            });
+        },
+
+        "÷": function(array) {
+            return map(array, function(x) { return 1 / x; });
+        },
+
         "ι": function(object1) {
             if(isNumber(object1)) {
                 return iota(object1, 1, 1);
@@ -20,11 +31,43 @@
                 throw new Error("NOT SUPPORTED");
             }
         },
+
         "ρ": function(object1) {
             return scalarize(rho(object1));
         },
+
         "〆": function(object1) {
             return transpose(object1);
+        },
+
+        "*": function(array) {
+            return map(array, function(x) { return Math.exp(x); });
+        },
+
+        "★": function(array) {
+            return monadic["*"](array);
+        },
+
+        "☆": function(array) {
+            return map(array, function(x) {
+                return Math.log(x);
+            });
+        },
+
+        "|": function(array) {
+            return map(array, function(x) { return Math.abs(x); });
+        },
+
+        "「": function(array) {
+            return map(array, function(x) { return Math.floor(x); });
+        },
+
+        "」": function(array) {
+            return map(array, function(x) { return Math.ceil(x); });
+        },
+
+        "〇": function(array) {
+            return map(array, function(x) { return Math.PI * x; });
         }
     };
 
@@ -32,21 +75,19 @@
         "+": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) { return x + y; });
         },
+
         "-": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) { return x - y; });
         },
+
         "×": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) { return x * y; });
         },
+
         "÷": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) { return x / y; });
         },
-        "=": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x === y });
-        },
-        "^": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x && y ? 1 : 0 });
-        },
+
         "ρ": function(vector1, vector2) {
             function gendim(index, dim) {
                 var result = [],
@@ -72,6 +113,115 @@
                 }
             }
             return gendim(0, 0).value;
+        },
+
+        "*": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return Math.pow(x, y); });
+        },
+
+        "★": function(object1, object2) {
+            return dyadic["*"](object1, object2);
+        },
+
+        "☆": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) {
+                return Math.log(y) / Math.log(x);
+            });
+        },
+
+        "|": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) {
+                if(x === 0) {
+                    return y;
+                } else if(x > 0 && y >= 0) {
+                    return y % x;
+                } else if(x > 0 && y <= 0) {
+                    return y % x + x;
+                } else if(x < 0 && y > 0) {
+                    return y % x + x;
+                } else {
+                    return y % x;
+                }
+            });
+        },
+
+        "「": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) {
+                return x > y ? x : y;
+            });
+        },
+
+        "」": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) {
+                return x < y ? x : y;
+            });
+        },
+
+        "〇": function(anInt, array2) {
+            var fn;
+
+            function getFn(anInt) {
+                switch(anInt) {
+                    case 0:   return function(x) { return Math.sqrt(1 - x * x); };
+                    case 1:   return Math.sin;
+                    case 2:   return Math.cos;
+                    case 3:   return Math.tan;
+                    case 4:   return function(x) { return Math.sqrt(1 + x * x); };
+                    case 5:   return sinh;
+                    case 6:   return cosh;
+                    case 7:   return tanh;
+                    case -1:  return Math.asin;
+                    case -2:  return Math.acos;
+                    case -3:  return Math.atan;
+                    case -4:  return function(x) { return Math.sqrt(-1 + x * x); };
+                    case -5:  return Math.asinh ? Math.asinh : K;
+                    case -6:  return Math.acosh ? Math.acosh : K;
+                    case -7:  return Math.atanh ? Math.atanh : K;
+                    default:  return K;
+                }
+            }
+            fn = getFn(anInt);
+            return map(array2, fn);
+        },
+
+        "=": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return x === y ? 1 : 0 });
+        },
+
+        "≠": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return x !== y ? 1 : 0 });
+        },
+
+        "<": function(object1, object2) {
+            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x < y }));
+        },
+
+        "≦": function(object1, object2) {
+            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x <= y }));
+        },
+
+        ">": function(object1, object2) {
+            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x > y }));
+        },
+
+        "≧": function(object1, object2) {
+            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x >= y }));
+        },
+
+        "^": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return x && y ? 1 : 0 });
+        },
+
+        "∧": function(object1, object2) {
+            return dyadic["^"];
+        },
+
+        "v": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return x || y ? 1 : 0 });
+        },
+
+        "∨": function(object1, object2) {
+            return dyadic["v"];
         }
     };
 
@@ -122,8 +272,34 @@
         return typeof anObject === "number";
     }
 
+    function isString(anObject) {
+        return typeof anObject === "string";
+    }
+
     function isArray(anObject) {
         return Object.prototype.toString.call(anObject) === '[object Array]';
+    }
+
+    function sinh(x) {
+        var y = Math.exp(x);
+        return (y - 1 / y) / 2;
+    }
+
+    function cosh(x) {
+        var y = Math.exp(x);
+        return (y + 1 / y) / 2;
+    }
+
+    function tanh(x) {
+        var y;
+        if(x === Infinity) {
+            return 1;
+        } else if(x === -Infinity) {
+            return -1;
+        } else {
+            y = Math.exp(x);
+            return (y - 1) / (y + 1);
+        }
     }
 
     function deepcopy(anObject) {
@@ -149,6 +325,16 @@
             return result;
         } else {
             return anObject;
+        }
+    }
+
+    function relCheck(f) {
+        return function(x, y) {
+            if(isNumber(x) && isNumber(y)) {
+                return f(x, y) ? 1 : 0;
+            } else {
+                throw new Error("DOMAIN ERROR");
+            }
         }
     }
 
@@ -314,16 +500,23 @@
     }
 
     function parseAPL(program, env) {
-        var NUMBERS = /[0-9]+([ \t]+[0-9]+)*/g,
+        var NUMBERS = /￣?[0-9]+([ \t]+￣?[0-9]+)*/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
             VARIABLE = /[A-Z]+/g,
             ASSIGN = /←/,
             OUTERPRODUCT = /・./;
 
+        function parseAPLFloat(x) {
+            var repl = x;
+
+            repl = repl.replace(/￣/, "-");
+            return parseFloat(repl);
+        }
+
         function getVector(vectorString) {
             var splitArray = vectorString.split(/[ \t]/),
-                result = map(splitArray, parseFloat);
+                result = map(splitArray, parseAPLFloat);
 
             if(result.length > 1) {
                 return result;
