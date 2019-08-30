@@ -222,6 +222,10 @@
 
         "∨": function(object1, object2) {
             return dyadic["v"];
+        },
+
+        "〆": function(vector1, array1) {
+            return substituteArray(vector1, array1);
         }
     };
 
@@ -278,6 +282,10 @@
 
     function isArray(anObject) {
         return Object.prototype.toString.call(anObject) === '[object Array]';
+    }
+
+    function isInteger(anObject) {
+        return typeof anObject === 'number' && isFinite(anObject) && Math.floor(anObject) === anObject;
     }
 
     function sinh(x) {
@@ -381,6 +389,67 @@
         }
 
         walk(array1, []);
+        return result;
+    }
+
+    function substituteArray(vector, array1) {
+        var result = [],
+            rankVector = rho(array1),
+            inIndices = [],
+            max;
+
+        function checkVector(vector) {
+            var i,
+                j,
+                max = 0;
+
+            for(i = 0; i < vector.length; i++) {
+                if(!isInteger(vector[i])) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                max = max < vector[i] ? vector[i] : max;
+            }
+
+            if(max <= 0 || max > vector.length) {
+                throw new Error("DOMAIN ERROR");
+            }
+
+            outer: for(i = 1; i <= max; i++) {
+                for(j = 0; j < vector.length; j++) {
+                    if(vector[j] === i) {
+                        continue outer;
+                    }
+                }
+                throw new Error("DOMAIN ERROR");
+            }
+            return max;
+        }
+
+        function subst(outIndices) {
+            var i,
+                j,
+                dest;
+
+            if(outIndices.length === max) {
+                setIndex(result, outIndices, getIndex(array1, inIndices));
+            } else {
+                dest = vector.indexOf(outIndices.length + 1);
+                for(i = 0; i < rankVector[dest]; i++) {
+                    for(j = 0; j < vector.length; j++) {
+                        if(vector[j] === outIndices.length + 1) {
+                            inIndices[j] = i;
+                        }
+                    }
+                    subst(outIndices.concat([i]));
+                }
+            }
+        }
+
+        if(vector.length !== rankVector.length) {
+            throw new Error("LENGTH ERROR");
+        }
+        max = checkVector(vector);
+        subst([]);
         return result;
     }
 
