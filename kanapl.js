@@ -569,7 +569,7 @@
     }
 
     function parseAPL(program, env) {
-        var NUMBERS = /￣?[0-9]+([ \t]+￣?[0-9]+)*/g,
+        var NUMBER = /￣?[0-9]+/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
             VARIABLE = /[A-Z]+/g,
@@ -581,17 +581,6 @@
 
             repl = repl.replace(/￣/, "-");
             return parseFloat(repl);
-        }
-
-        function getVector(vectorString) {
-            var splitArray = vectorString.split(/[ \t]/),
-                result = map(splitArray, parseAPLFloat);
-
-            if(result.length > 1) {
-                return result;
-            } else {
-                return result[0];
-            }
         }
 
         function getString(aString) {
@@ -677,10 +666,10 @@
                     attr: attr
                 };
             } else if(ch === "(") {
-                return walk(index + 1, attr);
+                return walk(index + 1, []);
             } else if(dyadic[ch]) {
                 resultOp = walkOperator(index + 1, dyadic[ch]);
-                result = walk(resultOp.lastIndex, attr);
+                result = walk(resultOp.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: resultOp.attr(attr, result.attr)
@@ -689,7 +678,7 @@
                 if(!(outerOp = dyadic[program.charAt(index + 2)])) {
                     throw new Error("SYNTAX ERROR");
                 }
-                result = walk(index + 3, attr);
+                result = walk(index + 3, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: outerProduct(outerOp, attr, result.attr)
@@ -711,12 +700,36 @@
             if(!ASSIGN.test(program.charAt(result.lastIndex))) {
                 return null;
             }
-            rval = walk(result.lastIndex + 1, attr);
+            rval = walk(result.lastIndex + 1, []);
             if(rval) {
                 env[varName] = rval.attr;
                 return skipBlank(rval.lastIndex, rval.attr);
             } else {
                 return null;
+            }
+        }
+
+        function walkAfterMonadic(index, attr) {
+            var result,
+                ch;
+
+            ch = program.charAt(index);
+            if(ch === "(") {
+                result = walk(index + 1, []);
+                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
+            } else if(!!(result = walkAssign(index, attr))) {
+                return result;
+            } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr))) {
+                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
+            } else if(!!(result = parseRegex(STRING, getString, index, attr))) {
+                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
+            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
+                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
+            } else {
+                if(attr.length === 0) {
+                    throw new Error("SYNTAX ERROR");
+                }
+                return walkFunction(index, attr.length > 1 ? attr : attr[0]);
             }
         }
 
@@ -732,28 +745,17 @@
             }
 
             ch = program.charAt(index);
-            if(ch === "(") {
-                result = walk(index + 1, attr);
-                return walkFunction(result.lastIndex, result.attr);
-            } else if(monadic[ch]) {
+            if(monadic[ch]) {
                 result = walk(index + 1, attr);
                 return {
                     lastIndex: result.lastIndex,
                     attr: monadic[ch](result.attr)
                 };
-            } else if(!!(result = walkAssign(index, attr))) {
-                return result;
-            } else if(!!(result = parseRegex(NUMBERS, getVector, index, attr))) {
-                return walkFunction(result.lastIndex, result.attr);
-            } else if(!!(result = parseRegex(STRING, getString, index, attr))) {
-                return walkFunction(result.lastIndex, result.attr);
-            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
-                return walkFunction(result.lastIndex, result.attr);
             } else {
-                throw new Error("SYNTAX ERROR");
+                return walkAfterMonadic(index, attr);
             }
         }
-        return walk(0, "NONE").attr;
+        return walk(0, []).attr;
     }
 
     function createEnv(env) {
