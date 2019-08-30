@@ -453,6 +453,77 @@
         return result;
     }
 
+    function foldOperator(operator, axis) {
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+
+        return function(array1) {
+            var rhoVector = rho(array1),
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+
+            function foldop(array0, level) {
+                var i,
+                    result;
+
+                if(!isArray(array0)) {
+                    return array0;
+                } else if(level === destAxis) {
+                    for(i = 0; i < array0.length; i++) {
+                        if(i > 0) {
+                            result = operator(result, foldop(array0[i], level + 1));
+                        } else {
+                            result = foldop(array0[i], level + 1);
+                        }
+                    }
+                } else {
+                    result = [];
+                    for(i = 0; i < array0.length; i++) {
+                        result[i] = foldop(array0[i], level + 1);
+                    }
+                }
+                return result;
+            }
+            return foldop(array1, 1);
+        };
+    }
+
+    function scanOperator(operator, axis) {
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+
+        return function(array1) {
+            var rhoVector = rho(array1),
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+
+            function foldop(array0, level) {
+                var i,
+                    result;
+
+                if(!isArray(array0)) {
+                    return array0;
+                } else if(level === destAxis) {
+                    result = [];
+                    for(i = 0; i < array0.length; i++) {
+                        if(i > 0) {
+                            result[i] = operator(result[i - 1], foldop(array0[i], level + 1));
+                        } else {
+                            result[i] = foldop(array0[i], level + 1);
+                        }
+                    }
+                } else {
+                    result = [];
+                    for(i = 0; i < array0.length; i++) {
+                        result[i] = foldop(array0[i], level + 1);
+                    }
+                }
+                return result;
+            }
+            return foldop(array1, 1);
+        };
+    }
+
     function iota(times, start, step) {
         var result = [],
             val = start,
@@ -684,7 +755,10 @@
                     attr: outerProduct(outerOp, attr, result.attr)
                 };
             } else {
-                throw new Error("SYNTAX ERROR");
+                return {
+                    lastIndex: index,
+                    attr: attr
+                };
             }
         }
 
@@ -733,8 +807,49 @@
             }
         }
 
+        function walkFoldAxis(index) {
+            var result;
+
+            if(program.charAt(index) === "[") {
+                result = walk(index + 1, []);
+                if(program.charAt(result.lastIndex) !== "]") {
+                    throw new Error("SYNTAX ERROR");
+                }
+                return {
+                    lastIndex: result.lastIndex + 1,
+                    attr: result.attr
+                };
+            } else {
+                return {
+                    lastIndex: index,
+                    attr: null
+                };
+            }
+        }
+
+        function walkFold(index, attr) {
+            var result;
+
+            if(program.charAt(index) === "/") {
+                result = walkFoldAxis(index + 1);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: foldOperator(attr, result.attr)
+                };
+            } else if(program.charAt(index) === "\\") {
+                result = walkFoldAxis(index + 1);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: scanOperator(attr, result.attr)
+                };
+            } else {
+                return null;
+            }
+        }
+
         function walk(index, attr) {
             var result,
+                resultFold,
                 ch;
 
             if(index >= program.length) {
@@ -745,8 +860,19 @@
             }
 
             ch = program.charAt(index);
+            if(dyadic[ch]) {
+                resultFold = walkFold(index + 1, dyadic[ch]);
+                if(resultFold) {
+                    result = walk(resultFold.lastIndex, []);
+                    return {
+                        lastIndex: result.lastIndex,
+                        attr: resultFold.attr(result.attr)
+                    };
+                }
+            }
+
             if(monadic[ch]) {
-                result = walk(index + 1, attr);
+                result = walk(index + 1, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: monadic[ch](result.attr)
