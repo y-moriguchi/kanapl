@@ -524,6 +524,100 @@
         };
     }
 
+    function compressArray(vector, array1, axis) {
+        var rhoVector,
+            destAxis;
+
+        function comp(array0, level) {
+            var result = [],
+                i;
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level === destAxis) {
+                if(vector.length !== array0.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                for(i = 0; i < vector.length; i++) {
+                    if(vector[i] !== 0) {
+                        result.push(comp(array0[i], level + 1));
+                    }
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = comp(array0[i], level + 1);
+                }
+            }
+            return result;
+        }
+
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+        rhoVector = rho(array1);
+        destAxis = axis === null ? rho(rhoVector)[0] : axis;
+        return comp(array1, 1);
+    }
+
+    function expandArray(vector, array1, axis) {
+        var rhoVector,
+            rank,
+            destAxis;
+
+        function pad(level, type) {
+            var result = [],
+                i;
+
+            if(level === rank) {
+                return isNumber(type) ? 0 : " ";
+            } else {
+                for(i = 0; i < rhoVector[level]; i++) {
+                    result[i] = pad(level + 1, type[0]);
+                }
+                return result;
+            }
+        }
+
+        function expand(array0, level) {
+            var result = [],
+                count = 0,
+                i;
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level === destAxis) {
+                for(i = 0; i < vector.length; i++) {
+                    if(vector[i] !== 0) {
+                        result.push(expand(array0[count], level + 1));
+                        count++;
+                    } else {
+                        result.push(pad(level, array0[0]));
+                    }
+                }
+                if(count !== array0.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = expand(array0[i], level + 1);
+                }
+            }
+            return result;
+        }
+
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+        rhoVector = rho(array1);
+        rank = rho(rhoVector)[0];
+        destAxis = axis === null ? rank : axis;
+        return expand(array1, 1);
+    }
+
+    function rotateArray(array1, array2, axis) {
+        throw new Error("Not Supported");
+    }
+
     function iota(times, start, step) {
         var result = [],
             val = start,
@@ -720,6 +814,7 @@
         function walkFunction(index, attr) {
             var result,
                 resultOp,
+                resultAxis,
                 outerOp,
                 ch;
 
@@ -738,6 +833,27 @@
                 };
             } else if(ch === "(") {
                 return walk(index + 1, []);
+            } else if(ch === "/") {
+                resultAxis = walkFoldAxis(index + 1);
+                result = walk(resultAxis.lastIndex, []);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: compressArray(attr, result.attr, resultAxis.attr)
+                };
+            } else if(ch === "\\") {
+                resultAxis = walkFoldAxis(index + 1);
+                result = walk(resultAxis.lastIndex, []);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: expandArray(attr, result.attr, resultAxis.attr)
+                };
+            } else if(ch === "φ") {
+                resultAxis = walkFoldAxis(index + 1);
+                result = walk(resultAxis.lastIndex, []);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: rotateArray(attr, result.attr, resultAxis.attr)
+                };
             } else if(dyadic[ch]) {
                 resultOp = walkOperator(index + 1, dyadic[ch]);
                 result = walk(resultOp.lastIndex, []);
