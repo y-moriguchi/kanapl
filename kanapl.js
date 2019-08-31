@@ -68,6 +68,10 @@
 
         "〇": function(array) {
             return map(array, function(x) { return Math.PI * x; });
+        },
+
+        ",": function(array) {
+            return toVector(array);
         }
     };
 
@@ -618,6 +622,79 @@
         throw new Error("Not Supported");
     }
 
+    function toVector(array1) {
+        function toVec(array0) {
+            var result,
+                i;
+
+            if(isArray(array0)) {
+                result = [];
+                for(i = 0; i < array0.length; i++) {
+                    result = result.concat(toVec(array0[i]));
+                }
+                return result;
+            } else {
+                return [array0];
+            }
+        }
+        return toVec(array1);
+    }
+
+    function concatenateArray(array1, array2, axis) {
+        var rhoVector,
+            rank,
+            destAxis;
+
+        function copy(array1) {
+            var result = [],
+                i;
+
+            if(isArray(array1)) {
+                for(i = 0; i < array1.length; i++) {
+                    result[i] = copy(array1[i]);
+                }
+                return result;
+            } else {
+                return array1;
+            }
+        }
+
+        function concat(array1, array2, level) {
+            var result = [],
+                count,
+                i;
+
+            if(level === destAxis) {
+                if(array1[0].length !== array2[0].length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                count = 0;
+                for(i = 0; i < array1.length; i++, count++) {
+                    result[count] = copy(array1[i]);
+                }
+                for(i = 0; i < array2.length; i++, count++) {
+                    result[count] = copy(array2[i]);
+                }
+            } else {
+                if(array1.length !== array2.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                for(i = 0; i < array1.length; i++) {
+                    result[i] = concat(array1[i], array2[i], level + 1);
+                }
+            }
+            return result;
+        }
+
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+        rhoVector = rho(array1);
+        rank = rho(rhoVector)[0];
+        destAxis = axis === null ? rank : axis;
+        return concat(array1, array2, 1);
+    }
+
     function iota(times, start, step) {
         var result = [],
             val = start,
@@ -853,6 +930,13 @@
                 return {
                     lastIndex: result.lastIndex,
                     attr: rotateArray(attr, result.attr, resultAxis.attr)
+                };
+            } else if(ch === ",") {
+                resultAxis = walkFoldAxis(index + 1);
+                result = walk(resultAxis.lastIndex, []);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: concatenateArray(attr, result.attr, resultAxis.attr)
                 };
             } else if(dyadic[ch]) {
                 resultOp = walkOperator(index + 1, dyadic[ch]);
