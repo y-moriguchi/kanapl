@@ -689,24 +689,24 @@
         return comp(array1, 1);
     }
 
+    function padArray(rhoVector, level, type) {
+        var result = [],
+            i;
+
+        if(level === rhoVector.length) {
+            return isNumber(type) ? 0 : " ";
+        } else {
+            for(i = 0; i < rhoVector[level]; i++) {
+                result[i] = padArray(rhoVector, level + 1, type[0]);
+            }
+            return result;
+        }
+    }
+
     function expandArray(vector, array1, axis) {
         var rhoVector,
             rank,
             destAxis;
-
-        function pad(level, type) {
-            var result = [],
-                i;
-
-            if(level === rank) {
-                return isNumber(type) ? 0 : " ";
-            } else {
-                for(i = 0; i < rhoVector[level]; i++) {
-                    result[i] = pad(level + 1, type[0]);
-                }
-                return result;
-            }
-        }
 
         function expand(array0, level) {
             var result = [],
@@ -721,7 +721,7 @@
                         result.push(expand(array0[count], level + 1));
                         count++;
                     } else {
-                        result.push(pad(level, array0[0]));
+                        result.push(padArray(rhoVector, level, array0[0]));
                     }
                 }
                 if(count !== array0.length) {
@@ -745,7 +745,83 @@
     }
 
     function rotateArray(array1, array2, axis) {
-        throw new Error("Not Supported");
+        var rhoVector,
+            rank,
+            destAxis,
+            result = [];
+
+        function rotate(indices, level) {
+            var i,
+                inIndices,
+                indicesSet,
+                rotated;
+
+            if(level > rank) {
+                inIndices = indices.slice();
+                inIndices.splice(destAxis - 1, 0, 0);
+                rotated = getIndex(array1, indices);
+                rotated = rotated < 0 ? rotated + rhoVector[destAxis - 1] : rotated;
+                inIndices[destAxis - 1] = rotated;
+                indicesSet = indices.slice();
+                indicesSet.splice(destAxis - 1, 0, 0);
+                for(i = 0; i < rhoVector[destAxis - 1]; i++) {
+                    indicesSet[destAxis - 1] = i;
+                    setIndex(result, indicesSet, getIndex(array2, inIndices));
+                    inIndices[destAxis - 1]++;
+                    if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
+                        inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
+                    }
+                }
+            } else if(level === destAxis) {
+                rotate(indices, level + 1);
+            } else {
+                for(i = 0; i < rhoVector[level - 1]; i++) {
+                    rotate(indices.concat([i]), level + 1);
+                }
+            }
+        }
+
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+        rhoVector = rho(array2);
+        rank = rho(rhoVector)[0];
+        destAxis = axis === null ? rank : axis;
+        rotate([], 1);
+        return result;
+    }
+
+    function reverseArray(array1, axis) {
+        var rhoVector,
+            rank,
+            destAxis,
+            result = [];
+
+        function rev(array0, level) {
+            var result = [],
+                i;
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level === destAxis) {
+                for(i = 0; i < array0.length; i++) {
+                    result[array0.length - i - 1] = rev(array0[i], level + 1);
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = rev(array0[i], level + 1);
+                }
+            }
+            return result;
+        }
+
+        if(axis !== null && !isInteger(axis)) {
+            throw new Error("AXIS ERROR");
+        }
+        rhoVector = rho(array1);
+        rank = rho(rhoVector)[0];
+        destAxis = axis === null ? rank : axis;
+        return rev(array1, 1);
     }
 
     function toVector(array1) {
@@ -1176,6 +1252,7 @@
         function walk(index, attr) {
             var result,
                 resultFold,
+                resultAxis,
                 ch;
 
             if(index >= program.length) {
@@ -1202,6 +1279,13 @@
                 return {
                     lastIndex: result.lastIndex,
                     attr: monadic[ch](result.attr)
+                };
+            } else if(ch === "φ") {
+                resultAxis = walkFoldAxis(index + 1);
+                result = walk(resultAxis.lastIndex, []);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: reverseArray(result.attr, resultAxis.attr)
                 };
             } else {
                 return walkAfterMonadic(index, attr);
