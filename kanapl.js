@@ -72,6 +72,12 @@
 
         ",": function(array) {
             return toVector(array);
+        },
+
+        "?": function(array) {
+            return map(array, function(x) {
+                return Math.floor(Math.random() * x + 1);
+            });
         }
     };
 
@@ -101,7 +107,7 @@
 
                 if(dim >= vector1.length) {
                     return {
-                        value: vector2[index],
+                        value: isArray(vector2) ? vector2[index] : vector2,
                         index: index + 1
                     };
                 } else {
@@ -230,6 +236,26 @@
 
         "〆": function(vector1, array1) {
             return substituteArray(vector1, array1);
+        },
+
+        "?": function(number1, number2) {
+            var extracted = [],
+                i,
+                value;
+
+            if(!isInteger(number1) || !isInteger(number2)) {
+                throw new Error("DOMAIN ERROR");
+            } else if(number1 < 0 || number2 < 0 || number1 > number2) {
+                throw new Error("DOMAIN ERROR");
+            }
+            for(i = 0; i < number1; i++) {
+                value = Math.floor(Math.random() * number2 + 1);
+                while(extracted.indexOf(value) >= 0) {
+                    value = Math.floor(Math.random() * number2 + 1);
+                }
+                extracted.push(value);
+            }
+            return extracted;
         }
     };
 
