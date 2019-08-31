@@ -9,6 +9,29 @@
 (function(root) {
     var undef = void 0;
 
+    /*
+     * Reference:
+     * http://my.fit.edu/~gabdo/gamma.txt
+     */
+    var GAMMA_COEFFS = [
+        0.99999999999999709182,
+        57.156235665862923517,
+        -59.597960355475491248,
+        14.136097974741747174,
+        -0.49191381609762019978,
+        .33994649984811888699e-4,
+        .46523628927048575665e-4,
+        -.98374475304879564677e-4,
+        .15808870322491248884e-3,
+        -.21026444172410488319e-3,
+        .21743961811521264320e-3,
+        -.16431810653676389022e-3,
+        .84418223983852743293e-4,
+        -.26190838401581408670e-4,
+        .36899182659531622704e-5
+    ];
+    var LOG_SQRT_2PI = Math.log(2 * Math.PI) / 2;
+
     var monadic = {
         "-": function(array) {
             return map(array, function(x) { return -x; });
@@ -78,6 +101,10 @@
             return map(array, function(x) {
                 return Math.floor(Math.random() * x + 1);
             });
+        },
+
+        "!": function(array) {
+            return map(array, function(x) { return gamma(x + 1); });
         }
     };
 
@@ -99,21 +126,25 @@
         },
 
         "ρ": function(vector1, vector2) {
+            var vec1 = isArray(vector1) ? vector1 : [vector1];
+
             function gendim(index, dim) {
                 var result = [],
                     resultValue,
                     i,
                     nowIndex = index;
 
-                if(dim >= vector1.length) {
+                if(dim >= vec1.length) {
                     return {
                         value: isArray(vector2) ? vector2[index] : vector2,
                         index: index + 1
                     };
                 } else {
-                    for(i = 0; i < vector1[dim]; i++) {
+                    for(i = 0; i < vec1[dim]; i++) {
                         resultValue = gendim(index, dim + 1);
-                        index = resultValue.index % vector2.length;
+                        if(isArray(vector2)) {
+                            index = resultValue.index % vector2.length;
+                        }
                         result[i] = resultValue.value;
                     }
                     return {
@@ -256,6 +287,12 @@
                 extracted.push(value);
             }
             return extracted;
+        },
+
+        "!": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) {
+                return gamma(y + 1) / gamma(x + 1) / gamma(y - x + 1);
+            });
         }
     };
 
@@ -337,6 +374,69 @@
         } else {
             y = Math.exp(x);
             return (y - 1) / (y + 1);
+        }
+    }
+
+    /*
+     * Reference:
+     * http://my.fit.edu/~gabdo/gamma.txt
+     */
+    function lnGamma0(x) {
+        var g = 607.0 / 128.0,
+            r = 0,
+            s = 0,
+            t,
+            k;
+
+        if(x > 0) {
+            for(k = GAMMA_COEFFS.length - 1; k > 0; k--) {
+                s += GAMMA_COEFFS[k] / (x + k);
+            }
+            s += GAMMA_COEFFS[0];
+            t  = x + g + 0.5;
+            r  = (x + 0.5) * Math.log(t);
+            r -= t;
+            r += LOG_SQRT_2PI;
+            r += Math.log(s / x);
+            return r;
+        } else {
+            return NaN;
+        }
+    }
+
+    function gamma(x) {
+        function frac(n) {
+            var i,
+                result = 1;
+
+            for(i = 2; i <= n; i++) {
+                result *= i;
+            }
+            return result;
+        }
+
+        function sum(n) {
+            var i,
+                result = 0;
+
+            for(i = 1; i < n; i++) {
+                result += i;
+            }
+            return result;
+        }
+
+        if(isInteger(x)) {
+            if(x >= 1) {
+                return frac(x - 1);
+            } else {
+                return NaN;
+            }
+        } else if(x > 1) {
+            return Math.exp(lnGamma0(x));
+        } else if(x > 0 && x < 1) {
+            return gamma(x + 1) / x;
+        } else {
+            return -Math.PI / Math.sin(Math.PI * x) / x / gamma(-x);
         }
     }
 
@@ -837,7 +937,7 @@
     }
 
     function parseAPL(program, env) {
-        var NUMBER = /￣?[0-9]+/g,
+        var NUMBER = /￣?[0-9]+(\.[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
             VARIABLE = /[A-Z]+/g,
