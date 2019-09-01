@@ -301,6 +301,14 @@
 
         "↓": function(object1, object2) {
             return dropArray(object1, object2);
+        },
+
+        "ε": function(object1, object2) {
+            return belongToArray(object1, object2);
+        },
+
+        "∈": function(object1, object2) {
+            return dyadic["ε"](object1, object2);
         }
     };
 
@@ -1011,6 +1019,27 @@
             }
         }
         return drop(array1, 1);
+    }
+
+    function belongToArray(array1, array2) {
+        function isElement(element) {
+            function elem(array0) {
+                var i;
+
+                if(isArray(array0)) {
+                    for(i = 0; i < array0.length; i++) {
+                        if(elem(array0[i])) {
+                            return 1;
+                        }
+                    }
+                    return 0;
+                } else {
+                    return element === array0;
+                }
+            }
+            return elem(array2);
+        }
+        return map(array1, isElement);
     }
 
     function iota(times, start, step) {
