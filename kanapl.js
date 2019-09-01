@@ -293,6 +293,14 @@
             return map2Scalar(object1, object2, function(x, y) {
                 return gamma(y + 1) / gamma(x + 1) / gamma(y - x + 1);
             });
+        },
+
+        "↑": function(object1, object2) {
+            return takeArray(object1, object2);
+        },
+
+        "↓": function(object1, object2) {
+            return dropArray(object1, object2);
         }
     };
 
@@ -923,6 +931,86 @@
             }
         }
         return pickUp(array1, pickUpIndices);
+    }
+
+    function takeArray(vector1, array1) {
+        var rhoVector;
+
+        function pad(type) {
+            var result = [],
+                i;
+
+            if(isArray(type)) {
+                for(i = 0; i < type.length; i++) {
+                    result[i] = pad(type[i]);
+                }
+                return result;
+            } else {
+                return isNumber(type) ? 0 : " ";
+            }
+        }
+
+        function take(array0, level) {
+            function arr(iStart, iEnd) {
+                var result = [],
+                    i;
+
+                for(i = 0; i < iEnd - iStart; i++) {
+                    if(i < array0.length) {
+                        result[i] = take(array0[i + iStart], level + 1);
+                    } else {
+                        result[i] = pad(result[0]);
+                    }
+                }
+                return result;
+            }
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level - 1 >= vector1.length) {
+                throw new Error("LENGTH ERROR");
+            } else if(vector1[level - 1] > 0) {
+                return arr(0, vector1[level - 1]);
+            } else if(vector1[level - 1] === 0) {
+                return arr(0, array0.length);
+            } else {
+                return arr(array0.length + vector1[level - 1], array0.length);
+            }
+        }
+        rhoVector = rho(array1);
+        return take(array1, 1);
+    }
+
+    function dropArray(vector1, array1) {
+        function drop(array0, level) {
+            function arr(iStart, iEnd) {
+                var result = [],
+                    i;
+
+                for(i = 0; i < iEnd - iStart; i++) {
+                    result[i] = drop(array0[i + iStart], level + 1);
+                    if(isArray(result[i]) && result[i].length === 0) {
+                        return [];
+                    }
+                }
+                return result;
+            }
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level - 1 >= vector1.length) {
+                throw new Error("LENGTH ERROR");
+            } else if(vector1[level - 1] >= array0.length) {
+                return [];
+            } else if(vector1[level - 1] > 0) {
+                return arr(vector1[level - 1], array0.length);
+            } else if(vector1[level - 1] === 0) {
+                return arr(0, array0.length);
+            } else {
+                return arr(0, array0.length + vector1[level - 1]);
+            }
+        }
+        return drop(array1, 1);
     }
 
     function iota(times, start, step) {
