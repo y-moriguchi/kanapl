@@ -105,6 +105,14 @@
 
         "!": function(array) {
             return map(array, function(x) { return gamma(x + 1); });
+        },
+
+        "♯": function(vector) {
+            return sortVector(vector, false);
+        },
+
+        "♭": function(vector) {
+            return sortVector(vector, true);
         }
     };
 
@@ -1040,6 +1048,22 @@
             return elem(array2);
         }
         return map(array1, isElement);
+    }
+
+    function sortVector(vector1, desc) {
+        var sorted,
+            i;
+
+        sorted = vector1.slice().sort(function(x, y) {
+            return x < y ? -1 : x > y ? 1 : 0;
+        });
+        for(i = 0; i < sorted.length; i++) {
+            sorted[i] = vector1.indexOf(sorted[i]) + 1;
+        }
+        if(desc) {
+            sorted.reverse();
+        }
+        return sorted;
     }
 
     function iota(times, start, step) {
