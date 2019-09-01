@@ -897,6 +897,34 @@
         return concat(array1, array2, 1);
     }
 
+    function pickUpArray(array1, pickUpIndices) {
+        function pickUp(array0, indices) {
+            var result,
+                i;
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(isNumber(indices[0])) {
+                return pickUp(array0[indices[0] - 1], pickUpIndices.slice(1));
+            } else if(indices[0] === null) {
+                result = [];
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = pickUp(array0[i], pickUpIndices.slice(1));
+                }
+                return result;
+            } else if(isArray(indices[0])) {
+                result = [];
+                for(i = 0; i < indices[0].length; i++) {
+                    result[i] = pickUp(array0[indices[0][i] - 1], pickUpIndices.slice(1));
+                }
+                return result;
+            } else {
+                throw new Error("DOMAIN ERROR");
+            }
+        }
+        return pickUp(array1, pickUpIndices);
+    }
+
     function iota(times, start, step) {
         var result = [],
             val = start,
@@ -1185,6 +1213,52 @@
             }
         }
 
+        function walkPickUpElement(index) {
+            var result = [],
+                result1;
+
+            if(program.charAt(index) === ";") {
+                result.push(null);
+                result1 = {
+                    lastIndex: index
+                };
+            } else if(!!(result1 = walk(index, []))) {
+                result.push(result1.attr);
+            } else {
+                return null;
+            }
+            while(program.charAt(result1.lastIndex) === ";") {
+                result1 = skipBlank(result1.lastIndex, result1.attr);
+                if(/;\]/.test(program.charAt(result1.lastIndex + 1))) {
+                    result.push(null);
+                } else if(!(result1 = walk(result1.lastIndex + 1, []))) {
+                    throw new Error("SYNTAX ERROR");
+                } else {
+                    result.push(result1.attr);
+                }
+            }
+            return {
+                lastIndex: result1.lastIndex,
+                attr: result
+            };
+        }
+
+        function walkPickUp(index, attr) {
+            var result;
+
+            if(program.charAt(index) !== "[") {
+                return null;
+            }
+            result = walkPickUpElement(index + 1, attr);
+            if(program.charAt(result.lastIndex) !== "]") {
+                throw new Error("SYNTAX ERROR");
+            }
+            return {
+                lastIndex: result.lastIndex + 1,
+                attr: pickUpArray(attr.length > 1 ? attr : attr[0], result.attr)
+            };
+        }
+
         function walkAfterMonadic(index, attr) {
             var result,
                 ch;
@@ -1194,6 +1268,8 @@
                 result = walk(index + 1, []);
                 return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
             } else if(!!(result = walkAssign(index, attr))) {
+                return result;
+            } else if(!!(result = walkPickUp(index, attr))) {
                 return result;
             } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr))) {
                 return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
