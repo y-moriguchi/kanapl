@@ -539,7 +539,7 @@
                 i;
 
             for(i = 0; i < permutation.length; i++) {
-                result[i] = matrix[permutation[i]];
+                result[permutation[i]] = matrix[i];
             }
             return result;
         },
@@ -559,43 +559,38 @@
             return result;
         },
 
-        selectPivot: function(matrix) {
-            var i,
-                j,
-                tmp,
-                permutation = iota(matrix.length, 0, 1);
-
-            outer: for(i = 0; i < matrix.length; i++) {
-                if(matrix[permutation[i]][i] === 0) {
-                    for(j = 0; j < matrix.length; j++) {
-                        if(matrix[permutation[j]][i] !== 0) {
-                            tmp = permutation[j];
-                            permutation[j] = permutation[i];
-                            permutation[i] = tmp;
-                            continue outer;
-                        }
-                    }
-                    throw new Error("DOMAIN ERROR");
-                }
-            }
-            return permutation;
-        },
-
         factorizeLU: function(matrix) {
             var i,
                 j,
                 k,
+                m,
+                n,
                 A,
                 L,
                 U,
                 tA,
-                P = matrixLib.selectPivot(matrix);
+                P = iota(matrix.length, 0, 1);
 
             matrixLib.checkDiag(matrix);
-            A = matrixLib.columnPermutation(deepcopy(matrix), P);
+            A = deepcopy(matrix);
             L = matrixLib.makeZero(matrix.length, matrix.length);
             U = matrixLib.makeZero(matrix.length, matrix.length);
             for(k = 0; k < A.length; k++) {
+                if(A[k][k] === 0) {
+                    for(m = 0; m < A.length; m++) {
+                        if(A[k][m] !== 0) {
+                            tmp = P[m]; P[m] = P[k]; P[k] = tmp;
+                            for(n = 0; n < A.length; n++) {
+                                tmp = A[n][m]; A[n][m] = A[n][k]; A[n][k] = tmp;
+                            }
+                            break;
+                        }
+                    }
+                    if(m >= matrix.length) {
+                        throw new Error("DOMAIN ERROR");
+                    }
+                }
+
                 for(i = 0; i < A[0].length; i++) {
                     if(i < k) {
                         L[i][k] = U[k][i] = 0;
