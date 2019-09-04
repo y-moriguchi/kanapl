@@ -317,6 +317,18 @@
 
         "∈": function(object1, object2) {
             return dyadic["ε"](object1, object2);
+        },
+
+        "⊥": function(object1, object2) {
+            return decodeArray(object1, object2);
+        },
+
+        "┴": function(object1, object2) {
+            return dyadic["⊥"](object1, object2);
+        },
+
+        "┬": function(object1, object2) {
+            return encodeArray(object1, object2);
         }
     };
 
@@ -1064,6 +1076,121 @@
             sorted.reverse();
         }
         return sorted;
+    }
+
+    function decodeArray(array1, array2) {
+        var result = [],
+            rhoArray1,
+            rhoArray2,
+            rhoArray2a;
+
+        function decode(indicesArray1, rhoArray1, indicesArray2, rhoArray2) {
+            var fold1,
+                i,
+                maxRepeat,
+                base,
+                val;
+
+            if(rhoArray1.length > 1) {
+                for(i = 0; i < rhoArray1[0]; i++) {
+                    decode(indicesArray1.concat([i]), rhoArray1.slice(1), indicesArray2, rhoArray2);
+                }
+            } else if(rhoArray2.length > 0) {
+                for(i = 0; i < rhoArray2[0]; i++) {
+                    decode(indicesArray1, rhoArray1, indicesArray2.concat([i]), rhoArray2.slice(1));
+                }
+            } else {
+                fold1 = val = getIndex(array2, [0].concat(indicesArray2));
+                maxRepeat = Math.max(rhoArray2a, rhoArray1[0]);
+                for(i = 1; i < maxRepeat; i++) {
+                    if(i < rhoArray1[0]) {
+                        base = getIndex(array1, indicesArray1.concat([i]));
+                    }
+                    if(i < rhoArray2a) {
+                        val = getIndex(array2, [i].concat(indicesArray2));
+                    }
+                    fold1 = fold1 * base + val;
+                }
+                setIndex(result, indicesArray1.concat(indicesArray2), fold1);
+            }
+        }
+
+        function decodeScalar(array1, scalar) {
+            var result = [],
+                fold,
+                i;
+
+            if(isArray(array1[0])) {
+                for(i = 0; i < array1.length; i++) {
+                    result[i] = decodeScalar(array1[i], scalar);
+                }
+                return result;
+            } else {
+                fold = 0;
+                for(i = 0; i < array1.length; i++) {
+                    fold = scalar + array1[i] * fold;
+                }
+                return fold;
+            }
+        }
+
+        if(!isArray(array1)) {
+            return decodeArray([array1], array2);
+        } else if(isArray(array2)) {
+            rhoArray1 = rho(array1);
+            rhoArray2 = rho(array2);
+            rhoArray2a = rhoArray2[0];
+            decode([], rhoArray1, [], rhoArray2.slice(1));
+            return result;
+        } else {
+            return decodeScalar(array1, array2);
+        }
+    }
+
+    function encodeArray(array1, array2) {
+        var result = [],
+            rhoArray2 = rho(array2);
+
+        function encode(array0) {
+            var result = [],
+                rhoArray0 = rho(array0),
+                i;
+
+            function inner1(indicesArray0, indicesArray2) {
+                var i,
+                    enc,
+                    base;
+
+                if(indicesArray2.length < rhoArray2.length) {
+                    for(i = 0; i < rhoArray2[indicesArray2.length]; i++) {
+                        inner1(indicesArray0, indicesArray2.concat([i]));
+                    }
+                } else {
+                    enc = getIndex(array2, indicesArray2);
+                    for(i = rhoArray0[0] - 1; i >= 0; i--) {
+                        base = getIndex(array0, [i].concat(indicesArray0));
+                        setIndex(result, [i].concat(indicesArray0).concat(indicesArray2), enc % base);
+                        enc = Math.floor(enc / base);
+                    }
+                }
+            }
+
+            if(!isArray(array0)) {
+                return encode([array0]);
+            } else if(!isArray(array0[0])) {
+                inner1([], []);
+            } else if(!isArray(array0[0][0])) {
+                for(i = 0; i < array0[0].length; i++) {
+                    inner1([i], []);
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = encode(array0[i]);
+                }
+            }
+            return result;
+        }
+        return encode(array1);
     }
 
     function iota(times, start, step) {
