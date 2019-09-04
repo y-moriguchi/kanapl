@@ -113,6 +113,11 @@
 
         "♭": function(vector) {
             return sortVector(vector, true);
+        },
+
+        "※": function(matrix) {
+            matrixLib.checkDiag(matrix);
+            return matrixLib.solveGaussJordan(matrix, matrixLib.makeUnit(matrix.length, matrix.length));
         }
     };
 
@@ -329,6 +334,18 @@
 
         "┬": function(object1, object2) {
             return encodeArray(object1, object2);
+        },
+
+        "※": function(vector1, matrix2) {
+            var rho1 = rho(vector1);
+
+            matrixLib.checkDiag(matrix2);
+            if(rho1.length !== 1) {
+                throw new Error("RANK ERROR");
+            } else if(vector1.length !== matrix2.length) {
+                throw new Error("LENGTH ERROR");
+            }
+            return matrixLib.solve(matrix2, vector1);
         }
     };
 
@@ -475,6 +492,243 @@
             return -Math.PI / Math.sin(Math.PI * x) / x / gamma(-x);
         }
     }
+
+    var matrixLib = {
+        checkDiag: function(matrix) {
+            if(matrix.length < 2) {
+                throw new Error("RANK ERROR");
+            }
+
+            for(i = 0; i < matrix.length; i++) {
+                if(matrix[i].length !== matrix.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+            }
+        },
+
+        makeZero: function(sizeI, sizeJ) {
+            var i,
+                j,
+                result = [];
+
+            for(i = 0; i < sizeI; i++) {
+                result[i] = [];
+                for(j = 0; j < sizeJ; j++) {
+                    result[i][j] = 0;
+                }
+            }
+            return result;
+        },
+
+        makeUnit: function(sizeI, sizeJ) {
+            var i,
+                j,
+                result = [];
+
+            for(i = 0; i < sizeI; i++) {
+                result[i] = [];
+                for(j = 0; j < sizeJ; j++) {
+                    result[i][j] = i === j ? 1 : 0;
+                }
+            }
+            return result;
+        },
+
+        invertPermutation: function(matrix, permutation) {
+            var result = [],
+                i;
+
+            for(i = 0; i < permutation.length; i++) {
+                result[i] = matrix[permutation[i]];
+            }
+            return result;
+        },
+
+        columnPermutation: function(matrix, permutation) {
+            var source = deepcopy(matrix),
+                result = [],
+                i,
+                j;
+
+            for(i = 0; i < permutation.length; i++) {
+                result[i] = [];
+                for(j = 0; j < permutation.length; j++) {
+                    result[i][permutation[j]] = source[i][j];
+                }
+            }
+            return result;
+        },
+
+        selectPivot: function(matrix) {
+            var i,
+                j,
+                tmp,
+                permutation = iota(matrix.length, 0, 1);
+
+            outer: for(i = 0; i < matrix.length; i++) {
+                if(matrix[permutation[i]][i] === 0) {
+                    for(j = 0; j < matrix.length; j++) {
+                        if(matrix[permutation[j]][i] !== 0) {
+                            tmp = permutation[j];
+                            permutation[j] = permutation[i];
+                            permutation[i] = tmp;
+                            continue outer;
+                        }
+                    }
+                    throw new Error("DOMAIN ERROR");
+                }
+            }
+            return permutation;
+        },
+
+        factorizeLU: function(matrix) {
+            var i,
+                j,
+                k,
+                A,
+                L,
+                U,
+                tA,
+                P = matrixLib.selectPivot(matrix);
+
+            matrixLib.checkDiag(matrix);
+            A = matrixLib.columnPermutation(deepcopy(matrix), P);
+            L = matrixLib.makeZero(matrix.length, matrix.length);
+            U = matrixLib.makeZero(matrix.length, matrix.length);
+            for(k = 0; k < A.length; k++) {
+                for(i = 0; i < A[0].length; i++) {
+                    if(i < k) {
+                        L[i][k] = U[k][i] = 0;
+                    } else if(i === k) {
+                        L[i][k] = 1;
+                        U[k][i] = A[k][k];
+                    } else {
+                        L[i][k] = A[i][k] / A[k][k];
+                        U[k][i] = A[k][i];
+                    }
+                }
+
+                tA = deepcopy(A);
+                for(i = 0; i < A.length; i++) {
+                    A[i][k] = A[k][i] = 0;
+                }
+                for(i = k + 1; i < A.length; i++) {
+                    for(j = k + 1; j < A[0].length; j++) {
+                        A[i][j] = tA[i][j] - L[i][k] * U[k][j];
+                    }
+                }
+            }
+
+            return {
+                P: P,
+                L: L,
+                U: U
+            };
+        },
+
+        solve: function(matrix, vector) {
+            var i,
+                j,
+                lu,
+                L,
+                U,
+                y = [],
+                V,
+                result = [];
+
+            lu = matrixLib.factorizeLU(matrix);
+            L = lu.L;
+            U = lu.U;
+            V = vector.slice();
+
+            for(i = 0; i < matrix.length; i++) {
+                y[i] = 0;
+                for(j = 0; j < i; j++) {
+                    y[i] += L[i][j] * y[j];
+                }
+                y[i] = (V[i] - y[i]);
+            }
+
+            for(i = matrix.length - 1; i >= 0; i--) {
+                result[i] = 0;
+                for(j = i; j < V.length; j++) {
+                    result[i] += U[i][j] * result[j];
+                }
+                result[i] = (y[i] - result[i]) / U[i][i];
+            }
+            return matrixLib.invertPermutation(result, lu.P);
+        },
+
+        solveGaussJordan: function(matrix, source) {
+            var i,
+                j,
+                k,
+                val,
+                elm,
+                tmp,
+                permutation = iota(matrix.length, 0, 1),
+                m = deepcopy(matrix),
+                v = deepcopy(source);
+
+            matrixLib.checkDiag(matrix);
+            for(i = 0; i < m.length; i++) {
+                val = m[i][i];
+                if(val === 0) {
+                    for(j = 0; j < matrix.length; j++) {
+                        if(matrix[permutation[j]][i] !== 0) {
+                            tmp = permutation[j];
+                            permutation[j] = permutation[i];
+                            permutation[i] = tmp;
+                            tmp = m[j];
+                            m[j] = m[i];
+                            m[i] = tmp;
+                            val = m[i][i];
+                            break;
+                        }
+                    }
+                    if(j >= matrix.length) {
+                        throw new Error("DOMAIN ERROR");
+                    }
+                }
+
+                for(j = 0; j < m[i].length; j++) {
+                    if(i !== j) {
+                        elm = m[j][i] / val;
+                        for(k = 0; k < m.length; k++) {
+                            m[j][k] = m[j][k] - (m[i][k] * elm);
+                        }
+                        if(isArray(v[0])) {
+                            for(k = 0; k < v.length; k++) {
+                                v[j][k] = v[j][k] - (v[i][k] * elm);
+                            }
+                        } else {
+                            v[j] = v[j] - (v[i] * elm);
+                        }
+                    }
+                }
+
+                for(j = 0; j < m[i].length; j++) {
+                    if(i === j) {
+                        for(k = 0; k < m.length; k++) {
+                            if(i === k) {
+                                m[j][k] = 1;
+                            } else {
+                                m[j][k] = m[j][k] / val;
+                            }
+                        }
+                        if(isArray(v[0])) {
+                            for(k = 0; k < v.length; k++) {
+                                v[j][k] = v[j][k] / val;
+                            }
+                        } else {
+                            v[j] = v[j] / val;
+                        }
+                    }
+                }
+            }
+            return matrixLib.columnPermutation(v, permutation);
+        }
+    };
 
     function deepcopy(anObject) {
         var result;
@@ -1334,7 +1588,7 @@
         }
 
         function getVariable(varName) {
-            if(!env[varName]) {
+            if(env[varName] === undef) {
                 throw new Error("VALUE ERROR");
             }
             return env[varName];
