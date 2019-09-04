@@ -408,6 +408,22 @@
         return typeof anObject === 'number' && isFinite(anObject) && Math.floor(anObject) === anObject;
     }
 
+    function charArrayToString(anObject) {
+        var result = "",
+            i;
+
+        if(!isArray(anObject)) {
+            throw new Error("DOMAIN ERROR");
+        }
+        for(i = 0; i < anObject.length; i++) {
+            if(!isString(anObject[i]) || anObject[i].length !== 1) {
+                throw new Error("DOMAIN ERROR");
+            }
+            result += anObject[i];
+        }
+        return result;
+    }
+
     function sinh(x) {
         var y = Math.exp(x);
         return (y - 1 / y) / 2;
@@ -1846,7 +1862,9 @@
             var result,
                 resultFold,
                 resultAxis,
-                ch;
+                resultEval,
+                ch,
+                toEval;
 
             if(index >= program.length) {
                 return {
@@ -1879,6 +1897,14 @@
                 return {
                     lastIndex: result.lastIndex,
                     attr: reverseArray(result.attr, resultAxis.attr)
+                };
+            } else if(ch === "♪") {
+                result = walk(index + 1, []);
+                toEval = charArrayToString(result.attr);
+                resultEval = parseAPL(toEval, env);
+                return {
+                    lastIndex: result.lastIndex,
+                    attr: resultEval
                 };
             } else {
                 return walkAfterMonadic(index, attr);
