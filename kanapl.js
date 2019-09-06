@@ -337,15 +337,22 @@
         },
 
         "※": function(vector1, matrix2) {
-            var rho1 = rho(vector1);
+            var rho1 = rho(vector1),
+                rho2 = rho(matrix2);
 
-            matrixLib.checkDiag(matrix2);
             if(rho1.length !== 1) {
+                throw new Error("RANK ERROR");
+            } else if(rho2.length !== 2) {
                 throw new Error("RANK ERROR");
             } else if(vector1.length !== matrix2.length) {
                 throw new Error("LENGTH ERROR");
             }
-            return matrixLib.solve(matrix2, vector1);
+
+            if(matrixLib.isDiag(matrix2)) {
+                return matrixLib.solve(matrix2, vector1);
+            } else {
+                return leastSquare(matrix2, vector1);
+            }
         }
     };
 
@@ -510,6 +517,19 @@
     }
 
     var matrixLib = {
+        isDiag: function(matrix) {
+            if(matrix.length < 2) {
+                throw new Error("RANK ERROR");
+            }
+
+            for(i = 0; i < matrix.length; i++) {
+                if(matrix[i].length !== matrix.length) {
+                    return false;
+                }
+            }
+            return true;
+        },
+
         checkDiag: function(matrix) {
             if(matrix.length < 2) {
                 throw new Error("RANK ERROR");
@@ -740,6 +760,33 @@
             return matrixLib.columnPermutation(v, permutation);
         }
     };
+
+    function leastSquare(matrix, vector) {
+        var normalMatrix = [],
+            normalVector = [],
+            i,
+            j,
+            k;
+
+        for(i = 0; i < matrix[0].length; i++) {
+            normalMatrix[i] = [];
+            for(j = 0; j < matrix[0].length; j++) {
+                normalMatrix[i][j] = 0;
+                for(k = 0; k < matrix.length; k++) {
+                    normalMatrix[i][j] += matrix[k][i] * matrix[k][j];
+                }
+            }
+        }
+
+        for(i = 0; i < matrix[0].length; i++) {
+            normalVector[i] = 0;
+            for(k = 0; k < matrix.length; k++) {
+                normalVector[i] += matrix[k][i] * vector[k];
+            }
+        }
+
+        return matrixLib.solve(normalMatrix, normalVector);
+    }
 
     function deepcopy(anObject) {
         var result;
