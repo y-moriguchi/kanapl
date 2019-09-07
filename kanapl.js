@@ -2026,6 +2026,29 @@
             };
         }
 
+        function walkVariablePickUp(index, attr) {
+            var result,
+                varName;
+
+            if(!(result = parseRegex(VARIABLE, K, index, attr))) {
+                return null;
+            }
+            varName = result.attr;
+
+            if(program.charAt(result.lastIndex) !== "[") {
+                return null;
+            }
+            result = walkPickUpElement(result.lastIndex + 1, attr);
+            if(program.charAt(result.lastIndex) !== "]") {
+                throw new Error("SYNTAX ERROR");
+            }
+
+            return {
+                lastIndex: result.lastIndex + 1,
+                attr: pickUpArray(getVariable(varName), result.attr)
+            };
+        }
+
         function walkAfterMonadic(index, attr) {
             var result,
                 ch;
@@ -2037,6 +2060,8 @@
             } else if(!!(result = walkAssign(index, attr))) {
                 return result;
             } else if(!!(result = walkPickUp(index, attr))) {
+                return result;
+            } else if(!!(result = walkVariablePickUp(index, attr))) {
                 return result;
             } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr))) {
                 return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
