@@ -408,6 +408,22 @@
         }
     };
 
+    var MAP_APL_CHAR = {
+        "\u2339": "※",
+        "\u233d": "φ",
+        "\u233f": "/[0]",
+        "\u2340": "\\[0]",
+        "\u2349": "〆",
+        "\u234b": "♯",
+        "\u234e": "♪",
+        "\u2352": "♭",
+        "\u2355": "◆",
+        "\u2358": "!",
+        "\u235f": "☆",
+        "\u2373": "ι",
+        "\u2374": "ρ"
+    };
+
     function K(x) {
         return x;
     }
@@ -856,6 +872,21 @@
                 throw new Error("DOMAIN ERROR");
             }
         }
+    }
+
+    function mapHomomorphism(mapping, source) {
+        var result = "",
+            match,
+            i;
+
+        for(i = 0; i < source.length; i++) {
+            if((match = mapping[source.charAt(i)]) !== undef) {
+                result += match;
+            } else {
+                result += source.charAt(i);
+            }
+        }
+        return result;
     }
 
     function scalarize(anArray) {
@@ -2119,8 +2150,18 @@
     function createEnv(env) {
         var innerEnv = env ? deepcopy(env) : {};
 
+        function convertChar(program) {
+            var result = program;
+
+            result = mapHomomorphism(MAP_APL_CHAR, result);
+            return result;
+        }
+
         return function(program) {
-            return parseAPL(program, innerEnv);
+            var converted;
+
+            converted = convertChar(program);
+            return parseAPL(converted, innerEnv);
         };
     }
 
