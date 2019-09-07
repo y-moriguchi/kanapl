@@ -1225,24 +1225,62 @@
                 for(i = 0; i < array2.length; i++, count++) {
                     result[count] = copy(array2[i]);
                 }
+            } else if(level > destAxis) {
+                if(array1.length !== array2.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                result = [copy(array1)].concat([copy(array2)]);
             } else {
                 if(array1.length !== array2.length) {
                     throw new Error("LENGTH ERROR");
                 }
-                for(i = 0; i < array1.length; i++) {
+                for(i = 0; i < array2.length; i++) {
                     result[i] = concat(array1[i], array2[i], level + 1);
                 }
             }
             return result;
         }
 
-        if(axis !== null && !isInteger(axis)) {
+        function copyScalar(level) {
+            var result = [],
+                i;
+
+            if(level - 1 < rhoVector.length) {
+                for(i = 0; i < rhoVector[level - 1]; i++) {
+                    result[i] = copyScalar(level + 1);
+                }
+                return result;
+            } else {
+                return array1;
+            }
+        }
+
+        function concatScalar(array2, level) {
+            var result = [],
+                i;
+
+            if(level === destAxis) {
+                result[0] = copyScalar(level + 1);
+                for(i = 0; i < array2.length; i++) {
+                    result[i + 1] = copy(array2[i]);
+                }
+            } else if(level > destAxis) {
+                result = [copyScalar(level)].concat([copy(array2)]);
+            } else {
+                for(i = 0; i < array2.length; i++) {
+                    result[i] = concatScalar(array2[i], level + 1);
+                }
+            }
+            return result;
+        }
+
+        if(axis !== null && axis <= 0) {
             throw new Error("AXIS ERROR");
         }
-        rhoVector = rho(array1);
+        rhoVector = rho(array2);
         rank = rho(rhoVector)[0];
         destAxis = axis === null ? rank : axis;
-        return concat(array1, array2, 1);
+        return isArray(array1) ? concat(array1, array2, 1) : concatScalar(array2, 1);
     }
 
     function pickUpArray(array1, pickUpIndices) {
@@ -1642,7 +1680,7 @@
             for(i = 1; i < aString.length - 1; i++) {
                 result[i - 1] = aString.charAt(i);
             }
-            return result;
+            return result.length > 1 ? result : result[0];
         }
 
         function getVariable(varName) {
