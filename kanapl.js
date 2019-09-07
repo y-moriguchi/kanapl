@@ -118,6 +118,10 @@
         "※": function(matrix) {
             matrixLib.checkDiag(matrix);
             return matrixLib.solveGaussJordan(matrix, matrixLib.makeUnit(matrix.length, matrix.length));
+        },
+
+        "◆": function(array) {
+            return toStringArray(array, null);
         }
     };
 
@@ -353,6 +357,15 @@
             } else {
                 return leastSquare(matrix2, vector1);
             }
+        },
+
+        "◆": function(vector1, object2) {
+            var vec;
+
+            if(isArray(vector1) && vector1.length > 2) {
+                throw new Error("LENGTH ERROR");
+            }
+            return toStringArray(object2, vector1);
         }
     };
 
@@ -429,6 +442,27 @@
             result += anObject[i];
         }
         return result;
+    }
+
+    function stringToCharArray(aString) {
+        var result = [],
+            i;
+
+        for(i = 0; i < aString.length; i++) {
+            result[i] = aString.charAt(i);
+        }
+        return result;
+    }
+
+    function getNumberExponent(aNumber) {
+        var matched,
+            result;
+
+        if(!(matched = /(-?[0-9]*(?:\.[0-9]+)?)[eE]([\+\-][0-9]+)$/.exec(aNumber.toExponential()))) {
+            return NaN;
+        }
+        result = matched[2].replace(/^\+/, "");
+        return [parseFloat(matched[1]), parseInt(result)];
     }
 
     function sinh(x) {
@@ -1543,6 +1577,90 @@
         return encode(array1);
     }
 
+    function toStringArray(array1, format) {
+        function toStringStd(array0) {
+            var result = [],
+                resultString,
+                i;
+
+            if(!isArray(array0)) {
+                if(!isNumber(array0)) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                resultString = array0.toString();
+                resultString = resultString.replace(/-/, "￣");
+                resultString = resultString.replace(/e/, "E");
+                return stringToCharArray(resultString);
+            } else if(!isArray(array0[0])) {
+                for(i = 0; i < array0.length; i++) {
+                    if(i > 0) {
+                        result = result.concat([" "]);
+                    }
+                    result = result.concat(toStringStd(array0[i]));
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = toStringStd(array0[i]);
+                }
+            }
+            return result;
+        }
+
+        function toStringFix(array0, total, ptr) {
+            var result = [],
+                resultString,
+                resultLength,
+                exponent,
+                i;
+
+            if(!isArray(array0)) {
+                if(!isNumber(array0)) {
+                    throw new Error("DOMAIN ERROR");
+                }
+
+                if(ptr < 0) {
+                    exponent = getNumberExponent(array0);
+                    resultString = exponent[0].toPrecision(-ptr) + "E" + exponent[1].toString();
+                } else {
+                    resultString = array0.toFixed(ptr);
+                }
+
+                if(total < 0) {
+                    resultString = " " + resultString;
+                } else if(resultString.length > total) {
+                    throw new Error("DOMAIN ERROR");
+                } else {
+                    resultLength = resultString.length;
+                    for(i = 0; i < total - resultLength; i++) {
+                        resultString = " " + resultString;
+                    }
+                }
+                resultString = resultString.replace(/-/, "￣");
+                return stringToCharArray(resultString);
+            } else if(!isArray(array0[0])) {
+                for(i = 0; i < array0.length; i++) {
+                    result = result.concat(toStringFix(array0[i], total, ptr));
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = toStringFix(array0[i], total, ptr);
+                }
+            }
+            return result;
+        }
+
+        if(format === null) {
+            return toStringStd(array1);
+        } else if(!isArray(format)) {
+            return toStringFix(array1, -1, format);
+        } else {
+            if(!isNumber(format[0]) || !isNumber(format[1])) {
+                throw new Error("DOMAIN ERROR");
+            }
+            return toStringFix(array1, format[0], format[1]);
+        }
+    }
+
     function iota(times, start, step) {
         var result = [],
             val = start,
@@ -1659,7 +1777,7 @@
     }
 
     function parseAPL(program, env) {
-        var NUMBER = /￣?[0-9]+(\.[0-9]+)?/g,
+        var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
             VARIABLE = /[A-Z]+/g,
@@ -1669,7 +1787,7 @@
         function parseAPLFloat(x) {
             var repl = x;
 
-            repl = repl.replace(/￣/, "-");
+            repl = repl.replace(/[▲￣]/, "-");
             return parseFloat(repl);
         }
 
