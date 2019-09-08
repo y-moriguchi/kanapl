@@ -142,6 +142,17 @@
             return map2Scalar(object1, object2, function(x, y) { return x / y; });
         },
 
+        "ι": function(vector1, object2) {
+            if(!isArray(vector1)) {
+                throw new Error("LENGTH ERROR");
+            }
+            return map(object2, function(x) {
+                var result = vector1.indexOf(x)
+
+                return result < 0 ? vector1.length + 1 : result + 1;
+            });
+        },
+
         "ρ": function(vector1, vector2) {
             var vec1 = isArray(vector1) ? vector1 : [vector1];
 
@@ -422,6 +433,21 @@
         "\u235f": "☆",
         "\u2373": "ι",
         "\u2374": "ρ"
+    };
+
+    var MAP_FULLWIDTH = {
+        "１": "1",
+        "２": "2",
+        "３": "3",
+        "４": "4",
+        "５": "5",
+        "６": "6",
+        "７": "7",
+        "８": "8",
+        "９": "9",
+        "０": "0",
+        "＋": "+",
+        "－": "-"
     };
 
     function K(x) {
@@ -1811,7 +1837,7 @@
         var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
-            VARIABLE = /[A-Z]+/g,
+            VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]+/g,
             ASSIGN = /←/,
             OUTERPRODUCT = /・./;
 
@@ -1839,9 +1865,19 @@
             return env[varName];
         }
 
-        function skipBlank(index, attr) {
+        function skipBlankIndex(index) {
             var result;
 
+            BLANK.lastIndex = index;
+            result = BLANK.exec(program);
+            if(result && result.index === index) {
+                return BLANK.lastIndex;
+            } else {
+                return index;
+            }
+        }
+
+        function skipBlank(index, attr) {
             BLANK.lastIndex = index;
             result = BLANK.exec(program);
             if(result && result.index === index) {
@@ -1876,12 +1912,9 @@
                 if(index >= program.length || !(op2 = dyadic[program.charAt(index + 1)])) {
                     throw new Error("SYNTAX ERROR");
                 }
-                return walkOperator(index + 2, operator[ch](attr, op2));
+                return walkOperator(skipBlankIndex(index + 2), operator[ch](attr, op2));
             } else {
-                return {
-                    lastIndex: index,
-                    attr: attr
-                };
+                return skipBlank(index, attr);
             }
         }
 
@@ -1893,50 +1926,44 @@
                 ch;
 
             if(index >= program.length) {
-                return {
-                    lastIndex: index,
-                    attr: attr
-                };
+                return skipBlank(index, attr);
             }
 
             ch = program.charAt(index);
             if(ch === ")") {
-                return {
-                    lastIndex: index + 1,
-                    attr: attr
-                };
+                return skipBlank(skipBlankIndex(index + 1), attr);
             } else if(ch === "(") {
                 return walk(index + 1, []);
             } else if(ch === "/") {
-                resultAxis = walkFoldAxis(index + 1);
+                resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: compressArray(attr, result.attr, resultAxis.attr)
                 };
             } else if(ch === "\\") {
-                resultAxis = walkFoldAxis(index + 1);
+                resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: expandArray(attr, result.attr, resultAxis.attr)
                 };
             } else if(ch === "φ") {
-                resultAxis = walkFoldAxis(index + 1);
+                resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: rotateArray(attr, result.attr, resultAxis.attr)
                 };
             } else if(ch === ",") {
-                resultAxis = walkFoldAxis(index + 1);
+                resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: concatenateArray(attr, result.attr, resultAxis.attr)
                 };
             } else if(dyadic[ch]) {
-                resultOp = walkOperator(index + 1, dyadic[ch]);
+                resultOp = walkOperator(skipBlankIndex(index + 1), dyadic[ch]);
                 result = walk(resultOp.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
@@ -1946,16 +1973,13 @@
                 if(!(outerOp = dyadic[program.charAt(index + 2)])) {
                     throw new Error("SYNTAX ERROR");
                 }
-                result = walk(index + 3, []);
+                result = walk(skipBlankIndex(index + 3), []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: outerProduct(outerOp, attr, result.attr)
                 };
             } else {
-                return {
-                    lastIndex: index,
-                    attr: attr
-                };
+                return skipBlank(index, attr);
             }
         }
 
@@ -1971,7 +1995,7 @@
             if(!ASSIGN.test(program.charAt(result.lastIndex))) {
                 return null;
             }
-            rval = walk(result.lastIndex + 1, []);
+            rval = walk(skipBlankIndex(result.lastIndex + 1), []);
             if(rval) {
                 env[varName] = rval.attr;
                 return skipBlank(rval.lastIndex, rval.attr);
@@ -1998,16 +2022,13 @@
                 result1 = skipBlank(result1.lastIndex, result1.attr);
                 if(/;\]/.test(program.charAt(result1.lastIndex + 1))) {
                     result.push(null);
-                } else if(!(result1 = walk(result1.lastIndex + 1, []))) {
+                } else if(!(result1 = walk(skipBlankIndex(result1.lastIndex + 1), []))) {
                     throw new Error("SYNTAX ERROR");
                 } else {
                     result.push(result1.attr);
                 }
             }
-            return {
-                lastIndex: result1.lastIndex,
-                attr: result
-            };
+            return skipBlank(result1.lastIndex, result);
         }
 
         function walkPickUp(index, attr) {
@@ -2016,14 +2037,11 @@
             if(program.charAt(index) !== "[") {
                 return null;
             }
-            result = walkPickUpElement(index + 1, attr);
+            result = walkPickUpElement(skipBlankIndex(index + 1), attr);
             if(program.charAt(result.lastIndex) !== "]") {
                 throw new Error("SYNTAX ERROR");
             }
-            return {
-                lastIndex: result.lastIndex + 1,
-                attr: pickUpArray(attr.length > 1 ? attr : attr[0], result.attr)
-            };
+            return skipBlank(skipBlankIndex(result.lastIndex + 1), pickUpArray(attr.length > 1 ? attr : attr[0], result.attr))
         }
 
         function walkVariablePickUp(index, attr) {
@@ -2038,15 +2056,11 @@
             if(program.charAt(result.lastIndex) !== "[") {
                 return null;
             }
-            result = walkPickUpElement(result.lastIndex + 1, attr);
+            result = walkPickUpElement(skipBlankIndex(result.lastIndex + 1), attr);
             if(program.charAt(result.lastIndex) !== "]") {
                 throw new Error("SYNTAX ERROR");
             }
-
-            return {
-                lastIndex: result.lastIndex + 1,
-                attr: pickUpArray(getVariable(varName), result.attr)
-            };
+            return skipBlank(skipBlankIndex(result.lastIndex + 1), pickUpArray(getVariable(varName), result.attr))
         }
 
         function walkAfterMonadic(index, attr) {
@@ -2055,7 +2069,7 @@
 
             ch = program.charAt(index);
             if(ch === "(") {
-                result = walk(index + 1, []);
+                result = walk(skipBlankIndex(index + 1), []);
                 return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
             } else if(!!(result = walkAssign(index, attr))) {
                 return result;
@@ -2081,19 +2095,13 @@
             var result;
 
             if(program.charAt(index) === "[") {
-                result = walk(index + 1, []);
+                result = walk(skipBlankIndex(index + 1), []);
                 if(program.charAt(result.lastIndex) !== "]") {
                     throw new Error("SYNTAX ERROR");
                 }
-                return {
-                    lastIndex: result.lastIndex + 1,
-                    attr: result.attr
-                };
+                return skipBlank(skipBlankIndex(result.lastIndex + 1), result.attr);
             } else {
-                return {
-                    lastIndex: index,
-                    attr: null
-                };
+                return skipBlank(index, null);
             }
         }
 
@@ -2101,13 +2109,13 @@
             var result;
 
             if(program.charAt(index) === "/") {
-                result = walkFoldAxis(index + 1);
+                result = walkFoldAxis(skipBlankIndex(index + 1));
                 return {
                     lastIndex: result.lastIndex,
                     attr: foldOperator(attr, result.attr)
                 };
             } else if(program.charAt(index) === "\\") {
-                result = walkFoldAxis(index + 1);
+                result = walkFoldAxis(skipBlankIndex(index + 1));
                 return {
                     lastIndex: result.lastIndex,
                     attr: scanOperator(attr, result.attr)
@@ -2134,7 +2142,7 @@
 
             ch = program.charAt(index);
             if(dyadic[ch]) {
-                resultFold = walkFold(index + 1, dyadic[ch]);
+                resultFold = walkFold(skipBlankIndex(index + 1), dyadic[ch]);
                 if(resultFold) {
                     result = walk(resultFold.lastIndex, []);
                     return {
@@ -2145,20 +2153,20 @@
             }
 
             if(monadic[ch]) {
-                result = walk(index + 1, []);
+                result = walk(skipBlankIndex(index + 1), []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: monadic[ch](result.attr)
                 };
             } else if(ch === "φ") {
-                resultAxis = walkFoldAxis(index + 1);
+                resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
                     attr: reverseArray(result.attr, resultAxis.attr)
                 };
             } else if(ch === "♪") {
-                result = walk(index + 1, []);
+                result = walk(skipBlankIndex(index + 1), []);
                 toEval = charArrayToString(result.attr);
                 resultEval = parseAPL(toEval, env);
                 return {
@@ -2178,7 +2186,10 @@
         function convertChar(program) {
             var result = program;
 
+            result = result.replace(/　/g, " ");
+            result = result.trim();
             result = mapHomomorphism(MAP_APL_CHAR, result);
+            result = mapHomomorphism(MAP_FULLWIDTH, result);
             return result;
         }
 
