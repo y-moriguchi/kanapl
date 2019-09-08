@@ -262,19 +262,19 @@
         },
 
         "<": function(object1, object2) {
-            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x < y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x < y }));
         },
 
         "≦": function(object1, object2) {
-            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x <= y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x <= y }));
         },
 
         ">": function(object1, object2) {
-            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x > y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x > y }));
         },
 
         "≧": function(object1, object2) {
-            return mat2Scalar(object1, object2, relCheck(function(x, y) { return x >= y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x >= y }));
         },
 
         "^": function(object1, object2) {
@@ -291,6 +291,14 @@
 
         "∨": function(object1, object2) {
             return dyadic["v"];
+        },
+
+        "†": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return !(x && y) ? 1 : 0 });
+        },
+
+        "‡": function(object1, object2) {
+            return map2Scalar(object1, object2, function(x, y) { return !(x || y) ? 1 : 0 });
         },
 
         "〆": function(vector1, array1) {
@@ -422,8 +430,8 @@
     var MAP_APL_CHAR = {
         "\u2339": "※",
         "\u233d": "φ",
-        "\u233f": "/[0]",
-        "\u2340": "\\[0]",
+        "\u233f": "/[1]",
+        "\u2340": "\\[1]",
         "\u2349": "〆",
         "\u234b": "♯",
         "\u234e": "♪",
@@ -431,6 +439,8 @@
         "\u2355": "◆",
         "\u2358": "!",
         "\u235f": "☆",
+        "\u2372": "†",
+        "\u2371": "‡",
         "\u2373": "ι",
         "\u2374": "ρ"
     };
@@ -448,6 +458,43 @@
         "０": "0",
         "＋": "+",
         "－": "-"
+    };
+
+    var MAP_ASCII_STR = {
+        "~": "￣",
+        "*": "×",
+        "/": "÷",
+        "max": "「",
+        "min": "」",
+        "**": "★",
+        "log": "☆",
+        "tri": "〇",
+        ">=": "≧",
+        "<=": "≦",
+        "!=": "≠",
+        "and": "∧",
+        "or": "∨",
+        "nand": "†",
+        "nor": "‡",
+        "outer": "・",
+        "rho": "ρ",
+        "take": "↑",
+        "drop": "↓",
+        "/-": "/[1]",
+        "\\-": "\\[1]",
+        "rotate": "φ",
+        "rotate1": "φ[1]",
+        "tranpose": "〆",
+        "iota": "ι",
+        "in": "∈",
+        "asc": "♯",
+        "desc": "♭",
+        "domino": "※",
+        "encode": "┬",
+        "decode": "⊥",
+        "eval": "♪",
+        "tostring": "◆",
+        "<-": "←"
     };
 
     function K(x) {
@@ -2181,7 +2228,22 @@
     }
 
     function createEnv(env) {
-        var innerEnv = env ? deepcopy(env) : {};
+        var innerEnv = env ? deepcopy(env) : {},
+            PTN_KEYWORD = /('[^'\n]+')|(?:#([^#\n]+)#)/g;
+
+        function convertASCII(entire, quote, keyword) {
+            var result;
+
+            if(quote) {
+                return quote;
+            } else {
+                result = MAP_ASCII_STR[keyword];
+                if(!result) {
+                    throw new Error("Invalid keyword: " + keyword);
+                }
+                return result;
+            }
+        }
 
         function convertChar(program) {
             var result = program;
@@ -2190,6 +2252,7 @@
             result = result.trim();
             result = mapHomomorphism(MAP_APL_CHAR, result);
             result = mapHomomorphism(MAP_FULLWIDTH, result);
+            result = result.replace(PTN_KEYWORD, convertASCII);
             return result;
         }
 
