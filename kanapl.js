@@ -99,6 +99,9 @@
 
         "?": function(array) {
             return map(array, function(x) {
+                if(!(isInteger(x) && x >= 1)) {
+                    throw new Error("DOMAIN ERROR");
+                }
                 return Math.floor(Math.random() * x + 1);
             });
         },
@@ -147,14 +150,15 @@
                 throw new Error("LENGTH ERROR");
             }
             return map(object2, function(x) {
-                var result = vector1.indexOf(x)
+                var result = vector1.indexOf(x);
 
                 return result < 0 ? vector1.length + 1 : result + 1;
             });
         },
 
         "ρ": function(vector1, vector2) {
-            var vec1 = isArray(vector1) ? vector1 : [vector1];
+            var vec1 = isArray(vector1) ? vector1 : [vector1],
+                vec2 = isArray(vector2) ? toVector(vector2) : [vector2];
 
             function gendim(index, dim) {
                 var result = [],
@@ -164,15 +168,13 @@
 
                 if(dim >= vec1.length) {
                     return {
-                        value: isArray(vector2) ? vector2[index] : vector2,
+                        value: isArray(vec2) ? vec2[index] : vec2,
                         index: index + 1
                     };
                 } else {
                     for(i = 0; i < vec1[dim]; i++) {
                         resultValue = gendim(index, dim + 1);
-                        if(isArray(vector2)) {
-                            index = resultValue.index % vector2.length;
-                        }
+                        index = resultValue.index % vec2.length;
                         result[i] = resultValue.value;
                     }
                     return {
@@ -181,7 +183,17 @@
                     };
                 }
             }
-            return gendim(0, 0).value;
+
+            checkVectorByFunction(vec1, function(x) {
+                return isInteger(x) && x >= 0;
+            });
+            if(vec2.length === 0) {
+                return 0;
+            } else if(vec1.length === 0) {
+                return vec2[0];
+            } else {
+                return gendim(0, 0).value;
+            }
         },
 
         "*": function(object1, object2) {
@@ -363,6 +375,7 @@
             var rho1 = rho(vector1),
                 rho2 = rho(matrix2);
 
+            matrixLib.checkMatrix(matrix2);
             if(rho1.length !== 1) {
                 throw new Error("RANK ERROR");
             } else if(rho2.length !== 2) {
@@ -392,9 +405,9 @@
         ".": function(fn1, fn2) {
             return function(array1, array2) {
                 var result = [],
-                    rhoArray1 = rho(array1),
-                    rhoArray2 = rho(array2),
-                    rhoArray2a = rhoArray2[0];
+                    rhoArray1,
+                    rhoArray2,
+                    rhoArray2a;
 
                 function generate1(indicesArray1, rhoArray1, indicesArray2, rhoArray2) {
                     var fold1,
@@ -421,8 +434,74 @@
                     }
                 }
 
-                generate1([], rhoArray1, [], rhoArray2.slice(1));
-                return result;
+                function generateLeftScalar(scalar, indicesArray2, rhoArray2) {
+                    var fold1,
+                        i;
+
+                    if(rhoArray2.length > 0) {
+                        for(i = 0; i < rhoArray2[0]; i++) {
+                            generateLeftScalar(scalar, indicesArray2.concat([i]), rhoArray2.slice(1));
+                        }
+                    } else {
+                        fold1 = [];
+                        for(i = 0; i < rhoArray2a; i++) {
+                            fold1[i] = fn2(scalar, getIndex(array2, [i].concat(indicesArray2)));
+                        }
+                        if(indicesArray2.length > 0) {
+                            setIndex(result, indicesArray2, fold(fold1, fn1));
+                        } else {
+                            result = fold(fold1, fn1);
+                        }
+                    }
+                }
+
+                function generateRightScalar(array1, scalar) {
+                    var result = [],
+                        fold1,
+                        i;
+
+                    if(!isArray(array1[0])) {
+                        fold1 = [];
+                        for(i = 0; i < array1.length; i++) {
+                            fold1[i] = fn2(array1[i], scalar);
+                        }
+                        return fold(fold1, fn1);
+                    } else {
+                        for(i = 0; i < array1.length; i++) {
+                            result[i] = generateLeftScalar(array1[i], scalar);
+                        }
+                        return result;
+                    }
+                }
+
+                if(!isArray(array1) && !isArray(array2)) {
+                    return fn2(array1, array2);
+                } else if(!isArray(array1)) {
+                    if(array1.length === 0) {
+                        return 0;
+                    } else {
+                        rhoArray2 = rho(array2);
+                        rhoArray2a = rhoArray2[0];
+                        generateLeftScalar(array1, [], rhoArray2.slice(1));
+                        return result;
+                    }
+                } else if(!isArray(array2)) {
+                    if(array2.length === 0) {
+                        return 0;
+                    } else {
+                        return generateRightScalar(array1, array2);
+                    }
+                } else if(array1.length === 0 && array2.length === 0) {
+                    return 0;
+                } else if(array1.length === 0 || array2.length === 0) {
+                    throw new Error("LENGTH ERROR");
+                } else {
+                    rhoArray1 = rho(array1);
+                    rhoArray2 = rho(array2);
+                    rhoArray2a = rhoArray2[0];
+                    generate1([], rhoArray1, [], rhoArray2.slice(1));
+                    return result;
+                }
             };
         }
     };
@@ -641,7 +720,7 @@
 
     var matrixLib = {
         isDiag: function(matrix) {
-            if(matrix.length < 2) {
+            if(!isArray(matrix) && matrix.length < 2) {
                 throw new Error("RANK ERROR");
             }
 
@@ -653,12 +732,30 @@
             return true;
         },
 
-        checkDiag: function(matrix) {
-            if(matrix.length < 2) {
+        checkMatrix: function(matrix) {
+            var length = -1;
+
+            if(!isArray(matrix) && matrix.length < 2) {
                 throw new Error("RANK ERROR");
             }
 
             for(i = 0; i < matrix.length; i++) {
+                checkVectorByFunction(matrix[i], function(x) { return isNumber(x); });
+                if(length < 0) {
+                    length = matrix[i].length;
+                } else if(matrix[i].length !== length) {
+                    throw new Error("LENGTH ERROR");
+                }
+            }
+        },
+
+        checkDiag: function(matrix) {
+            if(!isArray(matrix) && matrix.length < 2) {
+                throw new Error("RANK ERROR");
+            }
+
+            for(i = 0; i < matrix.length; i++) {
+                checkVectorByFunction(matrix[i], function(x) { return isNumber(x); });
                 if(matrix[i].length !== matrix.length) {
                     throw new Error("LENGTH ERROR");
                 }
@@ -989,6 +1086,21 @@
         }
     }
 
+    function checkVectorByFunction(vector0, fn) {
+        var i;
+
+        if(!isArray(vector0)) {
+            throw new Error("RANK ERROR");
+        }
+        for(i = 0; i < vector0.length; i++) {
+            if(isArray(vector0[i])) {
+                throw new Error("DOMAIN ERROR");
+            } else if(!fn(vector0[i])) {
+                throw new Error("DOMAIN ERROR");
+            }
+        }
+    }
+
     function transpose(array1) {
         var result = [];
 
@@ -1010,6 +1122,7 @@
 
     function substituteArray(vector, array1) {
         var result = [],
+            vec = isArray(vector) ? vector : [vector],
             rankVector = rho(array1),
             inIndices = [],
             max;
@@ -1049,10 +1162,10 @@
             if(outIndices.length === max) {
                 setIndex(result, outIndices, getIndex(array1, inIndices));
             } else {
-                dest = vector.indexOf(outIndices.length + 1);
+                dest = vec.indexOf(outIndices.length + 1);
                 for(i = 0; i < rankVector[dest]; i++) {
-                    for(j = 0; j < vector.length; j++) {
-                        if(vector[j] === outIndices.length + 1) {
+                    for(j = 0; j < vec.length; j++) {
+                        if(vec[j] === outIndices.length + 1) {
                             inIndices[j] = i;
                         }
                     }
@@ -1061,10 +1174,10 @@
             }
         }
 
-        if(vector.length !== rankVector.length) {
+        if(vec.length !== rankVector.length) {
             throw new Error("LENGTH ERROR");
         }
-        max = checkVector(vector);
+        max = checkVector(vec);
         subst([]);
         return result;
     }
@@ -1076,7 +1189,7 @@
 
         return function(array1) {
             var rhoVector = rho(array1),
-                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                destAxis;
 
             function foldop(array0, level) {
                 var i,
@@ -1100,7 +1213,15 @@
                 }
                 return result;
             }
-            return foldop(array1, 1);
+
+            if(!isArray(array1)) {
+                return array1;
+            } else if(array1.length === 0) {
+                return 0;
+            } else {
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                return foldop(array1, 1);
+            }
         };
     }
 
@@ -1111,7 +1232,7 @@
 
         return function(array1) {
             var rhoVector = rho(array1),
-                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                destAxis;
 
             function foldop(array0, level) {
                 var i,
@@ -1136,7 +1257,15 @@
                 }
                 return result;
             }
-            return foldop(array1, 1);
+
+            if(!isArray(array1)) {
+                return array1;
+            } else if(array1.length === 0) {
+                return [];
+            } else {
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                return foldop(array1, 1);
+            }
         };
     }
 
@@ -1167,12 +1296,30 @@
             return result;
         }
 
+        function compScalar(scalar) {
+            var result = [],
+                i;
+
+            for(i = 0; i < vector.length; i++) {
+                if(vector[i] !== 0) {
+                    result.push(scalar);
+                }
+            }
+            return result;
+        }
+
+        checkVectorByFunction(vector, function(x) { return true; });
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else if(!isArray(array1)) {
+            return compScalar(array1);
+        } else if(array1.length === 0) {
+            throw new Error("LENGTH ERROR");
+        } else {
+            rhoVector = rho(array1);
+            destAxis = axis === null ? rho(rhoVector)[0] : axis;
+            return comp(array1, 1);
         }
-        rhoVector = rho(array1);
-        destAxis = axis === null ? rho(rhoVector)[0] : axis;
-        return comp(array1, 1);
     }
 
     function padArray(rhoVector, level, type) {
@@ -1221,19 +1368,42 @@
             return result;
         }
 
+        function expandScalar(scalar) {
+            var result = [],
+                i;
+
+            for(i = 0; i < vector.length; i++) {
+                if(vector[i] !== 0) {
+                    result.push(scalar);
+                } else if(isNumber(scalar)) {
+                    result.push(0);
+                } else {
+                    result.push(" ");
+                }
+            }
+            return result;
+        }
+
+        checkVectorByFunction(vector, function(x) { return true; });
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else if(!isArray(array1)) {
+            return expandScalar(array1);
+        } else if(array1.length === 0) {
+            throw new Error("LENGTH ERROR");
+        } else {
+            rhoVector = rho(array1);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            return expand(array1, 1);
         }
-        rhoVector = rho(array1);
-        rank = rho(rhoVector)[0];
-        destAxis = axis === null ? rank : axis;
-        return expand(array1, 1);
     }
 
     function rotateArray(array1, array2, axis) {
         var rhoVector,
             rank,
             destAxis,
+            arrayFixed2 = isArray(array2) ? array2 : [array2],
             result = [];
 
         function rotate(indices, level) {
@@ -1245,14 +1415,19 @@
             if(level > rank) {
                 inIndices = indices.slice();
                 inIndices.splice(destAxis - 1, 0, 0);
+
                 rotated = getIndex(array1, indices);
                 rotated = rotated < 0 ? rotated + rhoVector[destAxis - 1] : rotated;
                 inIndices[destAxis - 1] = rotated;
+                if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
+                    inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
+                }
+
                 indicesSet = indices.slice();
                 indicesSet.splice(destAxis - 1, 0, 0);
                 for(i = 0; i < rhoVector[destAxis - 1]; i++) {
                     indicesSet[destAxis - 1] = i;
-                    setIndex(result, indicesSet, getIndex(array2, inIndices));
+                    setIndex(result, indicesSet, getIndex(arrayFixed2, inIndices));
                     inIndices[destAxis - 1]++;
                     if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
                         inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
@@ -1269,12 +1444,16 @@
 
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else {
+            rhoVector = rho(arrayFixed2);
+            rank = rho(rhoVector)[0];
+            if(rank !== rho(rho(array1))[0] + 1) {
+                throw new Error("RANK ERROR");
+            }
+            destAxis = axis === null ? rank : axis;
+            rotate([], 1);
+            return result;
         }
-        rhoVector = rho(array2);
-        rank = rho(rhoVector)[0];
-        destAxis = axis === null ? rank : axis;
-        rotate([], 1);
-        return result;
     }
 
     function reverseArray(array1, axis) {
@@ -1830,11 +2009,11 @@
     }
 
     function map2Scalar(object1, object2, action) {
-        if(isArray(object1) && isNumber(object2)) {
+        if(isArray(object1) && !isArray(object2)) {
             return map(object1, function(x) {
                 return action(x, object2);
             });
-        } else if(isNumber(object1) && isArray(object2)) {
+        } else if(!isArray(object1) && isArray(object2)) {
             return map(object2, function(x) {
                 return action(object1, x);
             });
@@ -2227,9 +2406,64 @@
         return walk(0, []).attr;
     }
 
+    function extractString(array0) {
+        function extract(array0) {
+            var result = [],
+                i;
+
+            if(isString(array0)) {
+                if(array0.length > 1) {
+                    return stringToCharArray(array0);
+                } else if(array0.length === 1) {
+                    return array0;
+                } else {
+                    return [];
+                }
+            } else if(isArray(array0)) {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = extract(array0[i]);
+                }
+                return result;
+            } else {
+                return array0;
+            }
+        }
+        return extract(array0);
+    }
+
+    function checkProperArray(array0) {
+        function lengthArray(array0) {
+            var length = -1,
+                i;
+
+            if(!isArray(array0)) {
+                return 0;
+            } else {
+                if(array0.length === 0) {
+                    throw new Error("Invalid Array");
+                }
+                for(i = 0; i < array0.length; i++) {
+                    if(length < 0) {
+                        length = lengthArray(array[i]);
+                    } else if(lengthArray(array[i]) !== length) {
+                        throw new Error("Invalid Array");
+                    }
+                }
+                return array0.length;
+            }
+        }
+
+        if(isArray(array0) && array0.length > 0) {
+            lengthArray(array0);
+        } else if(!(isNumber(array0) || isString(array0))) {
+            throw new Error("Invalid Array");
+        }
+    }
+
     function createEnv(env) {
         var innerEnv = env ? deepcopy(env) : {},
-            PTN_KEYWORD = /('[^'\n]+')|(?:#([^#\n]+)#)/g;
+            PTN_KEYWORD = /('[^'\n]+')|(?:#([^#\n]+)#)/g,
+            me;
 
         function convertASCII(entire, quote, keyword) {
             var result;
@@ -2256,12 +2490,22 @@
             return result;
         }
 
-        return function(program) {
-            var converted;
+        me = {
+            put: function(name, anObject) {
+                var source = extractString(anObject);
 
-            converted = convertChar(program);
-            return parseAPL(converted, innerEnv);
+                checkProperArray(source);
+                env[name] = source;
+            },
+
+            eval: function(program) {
+                var converted;
+
+                converted = convertChar(program);
+                return parseAPL(converted, innerEnv);
+            }
         };
+        return me;
     }
 
     if(typeof module !== "undefined" && module.exports) {
