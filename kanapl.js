@@ -1069,6 +1069,11 @@
 
     function getIndex(array1, indexVector) {
         if(isArray(array1)) {
+            if(!isInteger(indexVector[0])) {
+                throw new Error("DOMAIN ERROR");
+            } else if(indexVector[0] < 0 || indexVector[0] >= array1.length) {
+                throw new Error("INDEX ERROR");
+            }
             return getIndex(array1[indexVector[0]], indexVector.slice(1));
         } else {
             return array1;
@@ -1079,6 +1084,13 @@
         if(array1[indexVector[0]] === undef) {
             array1[indexVector[0]] = [];
         }
+
+        if(!isInteger(indexVector[0])) {
+            throw new Error("DOMAIN ERROR");
+        } else if(indexVector[0] < 0 || indexVector[0] >= array1.length) {
+            throw new Error("INDEX ERROR");
+        }
+
         if(indexVector.length > 1) {
             setIndex(array1[indexVector[0]], indexVector.slice(1), value);
         } else {
@@ -1097,6 +1109,20 @@
                 throw new Error("DOMAIN ERROR");
             } else if(!fn(vector0[i])) {
                 throw new Error("DOMAIN ERROR");
+            }
+        }
+    }
+
+    function checkArrayByFunction(array0, errorMsg, fn) {
+        var i;
+
+        if(isArray(array0)) {
+            for(i = 0; i < array0.length; i++) {
+                checkArrayByFunction(array0[i], errorMsg, fn);
+            }
+        } else {
+            if(!fn(array0)) {
+                throw new Error(errorMsg);
             }
         }
     }
@@ -1176,6 +1202,8 @@
 
         if(vec.length !== rankVector.length) {
             throw new Error("LENGTH ERROR");
+        } else if(rankVector.length === 0) {
+            return array1;
         }
         max = checkVector(vec);
         subst([]);
@@ -1406,33 +1434,42 @@
             arrayFixed2 = isArray(array2) ? array2 : [array2],
             result = [];
 
-        function rotate(indices, level) {
+        function rotate1(indices, rotatedNum) {
             var i,
                 inIndices,
                 indicesSet,
                 rotated;
 
-            if(level > rank) {
-                inIndices = indices.slice();
-                inIndices.splice(destAxis - 1, 0, 0);
+            inIndices = indices.slice();
+            inIndices.splice(destAxis - 1, 0, 0);
 
-                rotated = getIndex(array1, indices);
-                rotated = rotated < 0 ? rotated + rhoVector[destAxis - 1] : rotated;
-                inIndices[destAxis - 1] = rotated;
+            rotated = rotatedNum;
+            if(!isNumber(rotated)) {
+                throw new Error("DOMAIN ERROR");
+            }
+            rotated = rotated < 0 ? rotated + rhoVector[destAxis - 1] : rotated;
+            inIndices[destAxis - 1] = rotated;
+            if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
+                inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
+            }
+
+            indicesSet = indices.slice();
+            indicesSet.splice(destAxis - 1, 0, 0);
+            for(i = 0; i < rhoVector[destAxis - 1]; i++) {
+                indicesSet[destAxis - 1] = i;
+                setIndex(result, indicesSet, getIndex(arrayFixed2, inIndices));
+                inIndices[destAxis - 1]++;
                 if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
                     inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
                 }
+            }
+        }
 
-                indicesSet = indices.slice();
-                indicesSet.splice(destAxis - 1, 0, 0);
-                for(i = 0; i < rhoVector[destAxis - 1]; i++) {
-                    indicesSet[destAxis - 1] = i;
-                    setIndex(result, indicesSet, getIndex(arrayFixed2, inIndices));
-                    inIndices[destAxis - 1]++;
-                    if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
-                        inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
-                    }
-                }
+        function rotate(indices, level) {
+            var i;
+
+            if(level > rank) {
+                rotate1(indices, getIndex(array1, indices));
             } else if(level === destAxis) {
                 rotate(indices, level + 1);
             } else {
@@ -1442,8 +1479,34 @@
             }
         }
 
+        function rotateScalar(indices, level) {
+            var i,
+                inIndices,
+                indicesSet,
+                rotated;
+
+            if(level > rank) {
+                rotate1(indices, array1);
+            } else if(level === destAxis) {
+                rotateScalar(indices, level + 1);
+            } else {
+                for(i = 0; i < rhoVector[level - 1]; i++) {
+                    rotateScalar(indices.concat([i]), level + 1);
+                }
+            }
+        }
+
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else if(!isArray(array1)) {
+            if(array2.length === 0) {
+                return [];
+            }
+            rhoVector = rho(arrayFixed2);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            rotateScalar([], 1);
+            return result;
         } else {
             rhoVector = rho(arrayFixed2);
             rank = rho(rhoVector)[0];
@@ -1482,11 +1545,14 @@
 
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else if(!isArray(array1)) {
+            return array1;
+        } else {
+            rhoVector = rho(array1);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            return rev(array1, 1);
         }
-        rhoVector = rho(array1);
-        rank = rho(rhoVector)[0];
-        destAxis = axis === null ? rank : axis;
-        return rev(array1, 1);
     }
 
     function toVector(array1) {
@@ -1591,13 +1657,51 @@
             return result;
         }
 
+        function concatScalarRight(array1, level) {
+            var result = [],
+                i;
+
+            if(level === destAxis) {
+                for(i = 0; i < array1.length; i++) {
+                    result[i + 1] = copy(array1[i]);
+                }
+                result[0] = copyScalar(level + 1);
+            } else if(level > destAxis) {
+                result = [copyScalar(level)].concat([copy(array1)]);
+            } else {
+                for(i = 0; i < array1.length; i++) {
+                    result[i] = concatScalar(array1[i], level + 1);
+                }
+            }
+            return result;
+        }
+
         if(axis !== null && axis <= 0) {
             throw new Error("AXIS ERROR");
+        } else if(!isArray(array2)) {
+            if(array1.length === 0) {
+                return array2;
+            }
+            rhoVector = rho(array1);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            return concatScalarRight(array1, 1);
+        } else if(!isArray(array1)) {
+            if(array2.length === 0) {
+                return array1;
+            }
+            rhoVector = rho(array2);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            return concatScalar(array2, 1);
+        } else if(array1.length === 0 || array2.length === 0) {
+            throw new Error("LENGTH ERROR");
+        } else {
+            rhoVector = rho(array2);
+            rank = rho(rhoVector)[0];
+            destAxis = axis === null ? rank : axis;
+            return isArray(array1) ? concat(array1, array2, 1) : concatScalar(array2, 1);
         }
-        rhoVector = rho(array2);
-        rank = rho(rhoVector)[0];
-        destAxis = axis === null ? rank : axis;
-        return isArray(array1) ? concat(array1, array2, 1) : concatScalar(array2, 1);
     }
 
     function pickUpArray(array1, pickUpIndices) {
@@ -1608,6 +1712,9 @@
             if(!isArray(array0)) {
                 return array0;
             } else if(isNumber(indices[0])) {
+                if(!isInteger(indices[0]) || indices[0] < 1 || indices[0] > array0.length) {
+                    throw new Error("INDEX ERROR");
+                }
                 return pickUp(array0[indices[0] - 1], pickUpIndices.slice(1));
             } else if(indices[0] === null) {
                 result = [];
@@ -1618,6 +1725,9 @@
             } else if(isArray(indices[0])) {
                 result = [];
                 for(i = 0; i < indices[0].length; i++) {
+                    if(!isInteger(indices[0][i]) || indices[0][i] < 1 || indices[0][i] > array0.length) {
+                        throw new Error("INDEX ERROR");
+                    }
                     result[i] = pickUp(array0[indices[0][i] - 1], pickUpIndices.slice(1));
                 }
                 return result;
@@ -1625,11 +1735,20 @@
                 throw new Error("DOMAIN ERROR");
             }
         }
-        return pickUp(array1, pickUpIndices);
+
+        if(!isArray(array1)) {
+            throw new Error("RANK ERROR");
+        } else if(array1.length === 0) {
+            throw new Error("INDEX ERROR");
+        } else {
+            return pickUp(array1, pickUpIndices);
+        }
     }
 
     function takeArray(vector1, array1) {
-        var rhoVector;
+        var rhoVector,
+            vectorFixed1 = isArray(vector1) ? vector1 : [vector1],
+            arrayFixed1 = isArray(array1) ? array1 : [array1];
 
         function pad(type) {
             var result = [],
@@ -1662,21 +1781,36 @@
 
             if(!isArray(array0)) {
                 return array0;
-            } else if(level - 1 >= vector1.length) {
+            } else if(!isInteger(vectorFixed1[level - 1])) {
+                throw new Error("DOMAIN ERROR");
+            } else if(level - 1 >= vectorFixed1.length) {
                 throw new Error("LENGTH ERROR");
-            } else if(vector1[level - 1] > 0) {
-                return arr(0, vector1[level - 1]);
-            } else if(vector1[level - 1] === 0) {
+            } else if(vectorFixed1[level - 1] > 0) {
+                return arr(0, vectorFixed1[level - 1]);
+            } else if(vectorFixed1[level - 1] === 0) {
                 return arr(0, array0.length);
             } else {
-                return arr(array0.length + vector1[level - 1], array0.length);
+                return arr(array0.length + vectorFixed1[level - 1], array0.length);
             }
         }
-        rhoVector = rho(array1);
-        return take(array1, 1);
+
+        checkVectorByFunction(vectorFixed1, function(x) {
+            return isInteger(x);
+        });
+        if(arrayFixed1.length === 0) {
+            return [];
+        } else if(vectorFixed1.length === 0) {
+            return array1;
+        } else {
+            rhoVector = rho(arrayFixed1);
+            return take(arrayFixed1, 1);
+        }
     }
 
     function dropArray(vector1, array1) {
+        var vectorFixed1 = isArray(vector1) ? vector1 : [vector1],
+            arrayFixed1 = isArray(array1) ? array1 : [array1];
+
         function drop(array0, level) {
             function arr(iStart, iEnd) {
                 var result = [],
@@ -1693,19 +1827,31 @@
 
             if(!isArray(array0)) {
                 return array0;
-            } else if(level - 1 >= vector1.length) {
+            } else if(level - 1 >= vectorFixed1.length) {
                 throw new Error("LENGTH ERROR");
-            } else if(vector1[level - 1] >= array0.length) {
+            } else if(!isInteger(vectorFixed1[level - 1])) {
+                throw new Error("DOMAIN ERROR");
+            } else if(vectorFixed1[level - 1] >= array0.length) {
                 return [];
-            } else if(vector1[level - 1] > 0) {
-                return arr(vector1[level - 1], array0.length);
-            } else if(vector1[level - 1] === 0) {
+            } else if(vectorFixed1[level - 1] > 0) {
+                return arr(vectorFixed1[level - 1], array0.length);
+            } else if(vectorFixed1[level - 1] === 0) {
                 return arr(0, array0.length);
             } else {
-                return arr(0, array0.length + vector1[level - 1]);
+                return arr(0, array0.length + vectorFixed1[level - 1]);
             }
         }
-        return drop(array1, 1);
+
+        checkVectorByFunction(vectorFixed1, function(x) {
+            return isInteger(x);
+        });
+        if(arrayFixed1.length === 0) {
+            return [];
+        } else if(vectorFixed1.length === 0) {
+            return array1;
+        } else {
+            return drop(arrayFixed1, 1);
+        }
     }
 
     function belongToArray(array1, array2) {
@@ -1724,25 +1870,35 @@
                     return element === array0;
                 }
             }
-            return elem(array2);
+            return elem(array1);
         }
-        return map(array1, isElement);
+
+        if(!isArray(array2)) {
+            return isElement(array2) ? 1 : 0;
+        } else {
+            return map(array2, isElement);
+        }
     }
 
     function sortVector(vector1, desc) {
         var sorted,
             i;
 
-        sorted = vector1.slice().sort(function(x, y) {
-            return x < y ? -1 : x > y ? 1 : 0;
-        });
-        for(i = 0; i < sorted.length; i++) {
-            sorted[i] = vector1.indexOf(sorted[i]) + 1;
+        checkVectorByFunction(vector1, function(x) { return true; });
+        if(!isArray(vector1)) {
+            return [];
+        } else {
+            sorted = vector1.slice().sort(function(x, y) {
+                return x < y ? -1 : x > y ? 1 : 0;
+            });
+            for(i = 0; i < sorted.length; i++) {
+                sorted[i] = vector1.indexOf(sorted[i]) + 1;
+            }
+            if(desc) {
+                sorted.reverse();
+            }
+            return sorted;
         }
-        if(desc) {
-            sorted.reverse();
-        }
-        return sorted;
     }
 
     function decodeArray(array1, array2) {
@@ -1801,22 +1957,36 @@
             }
         }
 
-        if(!isArray(array1)) {
+        checkArrayByFunction(array1, "DOMAIN ERROR", function(x) { return isNumber(x); });
+        checkArrayByFunction(array2, "DOMAIN ERROR", function(x) { return isNumber(x); });
+        if(!isArray(array1) && !isArray(array2)) {
+            return array2;
+        } else if(!isArray(array1)) {
+            if(array2.length === 0) {
+                return [];
+            }
             return decodeArray([array1], array2);
         } else if(isArray(array2)) {
+            if(array1.length === 0 || array2.length === 0) {
+                return [];
+            }
             rhoArray1 = rho(array1);
             rhoArray2 = rho(array2);
             rhoArray2a = rhoArray2[0];
             decode([], rhoArray1, [], rhoArray2.slice(1));
             return result;
         } else {
+            if(array1.length === 0) {
+                return [];
+            }
             return decodeScalar(array1, array2);
         }
     }
 
     function encodeArray(array1, array2) {
         var result = [],
-            rhoArray2 = rho(array2);
+            arrayFixed2 = isArray(array2) ? array2 : [array2],
+            rhoArray2 = rho(arrayFixed2);
 
         function encode(array0) {
             var result = [],
@@ -1833,7 +2003,7 @@
                         inner1(indicesArray0, indicesArray2.concat([i]));
                     }
                 } else {
-                    enc = getIndex(array2, indicesArray2);
+                    enc = getIndex(arrayFixed2, indicesArray2);
                     for(i = rhoArray0[0] - 1; i >= 0; i--) {
                         base = getIndex(array0, [i].concat(indicesArray0));
                         setIndex(result, [i].concat(indicesArray0).concat(indicesArray2), enc % base);
@@ -1857,7 +2027,28 @@
             }
             return result;
         }
-        return encode(array1);
+
+        function encodeScalar(array0) {
+            var result = [],
+                i;
+
+            if(isArray(array0)) {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = encodeScalar(array0[i]);
+                }
+                return result;
+            } else {
+                return array0 % array1;
+            }
+        }
+
+        checkArrayByFunction(array1, "DOMAIN ERROR", function(x) { return isNumber(x); });
+        checkArrayByFunction(arrayFixed2, "DOMAIN ERROR", function(x) { return isNumber(x); });
+        if(!isArray(array1)) {
+            return encodeScalar(arrayFixed2);
+        } else {
+            return encode(array1);
+        }
     }
 
     function toStringArray(array1, format) {
@@ -1932,7 +2123,9 @@
             return result;
         }
 
-        if(format === null) {
+        if(isArray(array1) && array1.length === 0) {
+            return [];
+        } else if(format === null) {
             return toStringStd(array1);
         } else if(!isArray(format)) {
             return toStringFix(array1, -1, format);
