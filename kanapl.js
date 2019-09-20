@@ -73,6 +73,9 @@
 
         "☆": function(array) {
             return map(array, function(x) {
+                if(x <= 0) {
+                    throw new Error("DOMAIN ERROR");
+                }
                 return Math.log(x);
             });
         },
@@ -82,15 +85,23 @@
         },
 
         "「": function(array) {
-            return map(array, function(x) { return Math.floor(x); });
+            return map(array, function(x) { return Math.ceil(x); });
         },
 
         "」": function(array) {
-            return map(array, function(x) { return Math.ceil(x); });
+            return map(array, function(x) { return Math.floor(x); });
         },
 
         "〇": function(array) {
             return map(array, function(x) { return Math.PI * x; });
+        },
+
+        "~": function(array) {
+            return map(array, function(x) { return x === 0 ? 1 : 0; });
+        },
+
+        "～": function(array) {
+            return monadic["~"](array);
         },
 
         ",": function(array) {
@@ -197,7 +208,33 @@
         },
 
         "*": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return Math.pow(x, y); });
+            function pow(x, y) {
+                var res,
+                    i;
+
+                if(isInteger(y)) {
+                    if(y > 0) {
+                        res = x;
+                        for(i = 1; i < y; i++) {
+                            res *= x;
+                        }
+                        return res;
+                    } else if(y === 0) {
+                        return 1;
+                    } else if(y < 0) {
+                        res = 1 / x;
+                        for(i = 1; i < -y; i++) {
+                            res /= x;
+                        }
+                        return res;
+                    }
+                } else if(y > 0) {
+                    return Math.pow(x, y);
+                } else {
+                    throw new Error("DOMAIN ERROR");
+                }
+            }
+            return map2Scalar(object1, object2, function(x, y) { return pow(x, y); });
         },
 
         "★": function(object1, object2) {
@@ -205,9 +242,13 @@
         },
 
         "☆": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) {
+            function log(x, y) {
+                if(x <= 0 || y <= 0) {
+                    throw new Error("DOMAIN ERROR");
+                }
                 return Math.log(y) / Math.log(x);
-            });
+            }
+            return map2Scalar(object1, object2, function(x, y) { return log(x, y); });
         },
 
         "|": function(object1, object2) {
@@ -241,9 +282,44 @@
         "〇": function(anInt, array2) {
             var fn;
 
+            function fn0(x) {
+                if(x > 1) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                return Math.sqrt(1 - x * x);
+            }
+
+            function fnM1(x) {
+                if(x < -1 || x > 1) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                return Math.asin(x);
+            }
+
+            function fnM2(x) {
+                if(x < -1 || x > 1) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                return Math.acos(x);
+            }
+
+            function fnM4(x) {
+                if(x < 1) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                return Math.sqrt(-1 + x * x);
+            }
+
+            function fnM6(x) {
+                if(x < 1) {
+                    throw new Error("DOMAIN ERROR");
+                }
+                return Math.acosh(x);
+            }
+
             function getFn(anInt) {
                 switch(anInt) {
-                    case 0:   return function(x) { return Math.sqrt(1 - x * x); };
+                    case 0:   return fn0;
                     case 1:   return Math.sin;
                     case 2:   return Math.cos;
                     case 3:   return Math.tan;
@@ -251,12 +327,12 @@
                     case 5:   return sinh;
                     case 6:   return cosh;
                     case 7:   return tanh;
-                    case -1:  return Math.asin;
-                    case -2:  return Math.acos;
+                    case -1:  return fnM1;
+                    case -2:  return fnM2;
                     case -3:  return Math.atan;
-                    case -4:  return function(x) { return Math.sqrt(-1 + x * x); };
+                    case -4:  return fnM4;
                     case -5:  return Math.asinh ? Math.asinh : K;
-                    case -6:  return Math.acosh ? Math.acosh : K;
+                    case -6:  return Math.acosh ? fnM6 : K;
                     case -7:  return Math.atanh ? Math.atanh : K;
                     default:  return K;
                 }
@@ -294,7 +370,7 @@
         },
 
         "∧": function(object1, object2) {
-            return dyadic["^"];
+            return dyadic["^"](object1, object2);
         },
 
         "v": function(object1, object2) {
@@ -302,7 +378,7 @@
         },
 
         "∨": function(object1, object2) {
-            return dyadic["v"];
+            return dyadic["v"](object1, object2);
         },
 
         "†": function(object1, object2) {
@@ -650,7 +726,7 @@
         } else if(x === -Infinity) {
             return -1;
         } else {
-            y = Math.exp(x);
+            y = Math.exp(2 * x);
             return (y - 1) / (y + 1);
         }
     }
@@ -706,8 +782,10 @@
         if(isInteger(x)) {
             if(x >= 1) {
                 return frac(x - 1);
+            } else if(x === 0) {
+                return 1;
             } else {
-                return NaN;
+                return Infinity;
             }
         } else if(x > 1) {
             return Math.exp(lnGamma0(x));
