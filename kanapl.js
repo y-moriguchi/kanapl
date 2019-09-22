@@ -1673,21 +1673,41 @@
         function concat(array1, array2, level) {
             var result = [],
                 count,
+                rhoArray1 = rho(array1),
+                rhoArray2 = rho(array2),
                 i;
 
             if(level === destAxis) {
-                if(array1[0].length !== array2[0].length) {
-                    throw new Error("LENGTH ERROR");
+                if(!isArray(array1)) {
+                    return concatScalar(array1, array2, level);
+                } else if(!isArray(array2)) {
+                    return concatScalarRight(array1, array2, level);
                 }
                 count = 0;
-                for(i = 0; i < array1.length; i++, count++) {
-                    result[count] = copy(array1[i]);
-                }
-                for(i = 0; i < array2.length; i++, count++) {
-                    result[count] = copy(array2[i]);
+                if(rhoArray1.length === rhoArray2.length) {
+                    for(i = 0; i < array1.length; i++, count++) {
+                        result[count] = copy(array1[i]);
+                    }
+                    for(i = 0; i < array2.length; i++, count++) {
+                        result[count] = copy(array2[i]);
+                    }
+                } else if(rhoArray1.length + 1 === rhoArray2.length) {
+                    result[0] = copy(array1);
+                    for(i = 0; i < array2.length; i++) {
+                        result[i + 1] = copy(array2[i]);
+                    }
+                } else if(rhoArray1.length === rhoArray2.length + 1) {
+                    for(i = 0; i < array1.length; i++) {
+                        result[i] = copy(array1[i]);
+                    }
+                    result[i] = copy(array2);
+                } else {
+                    throw new Error("RANK ERROR");
                 }
             } else if(level > destAxis) {
-                if(array1.length !== array2.length) {
+                if(rhoArray1.length !== rhoArray2.length) {
+                    throw new Error("RANK ERROR");
+                } else if(array1.length !== array2.length) {
                     throw new Error("LENGTH ERROR");
                 }
                 result = [copy(array1)].concat([copy(array2)]);
@@ -1702,53 +1722,53 @@
             return result;
         }
 
-        function copyScalar(level) {
+        function copyScalar(level, scalar) {
             var result = [],
                 i;
 
             if(level - 1 < rhoVector.length) {
                 for(i = 0; i < rhoVector[level - 1]; i++) {
-                    result[i] = copyScalar(level + 1);
+                    result[i] = copyScalar(level + 1, scalar);
                 }
                 return result;
             } else {
-                return array1;
+                return scalar;
             }
         }
 
-        function concatScalar(array2, level) {
+        function concatScalar(scalar, array2, level) {
             var result = [],
                 i;
 
             if(level === destAxis) {
-                result[0] = copyScalar(level + 1);
+                result[0] = copyScalar(level + 1, scalar);
                 for(i = 0; i < array2.length; i++) {
                     result[i + 1] = copy(array2[i]);
                 }
             } else if(level > destAxis) {
-                result = [copyScalar(level)].concat([copy(array2)]);
+                result = [copyScalar(level, scalar)].concat([copy(array2)]);
             } else {
                 for(i = 0; i < array2.length; i++) {
-                    result[i] = concatScalar(array2[i], level + 1);
+                    result[i] = concatScalar(scalar, array2[i], level + 1);
                 }
             }
             return result;
         }
 
-        function concatScalarRight(array1, level) {
+        function concatScalarRight(array1, scalar, level) {
             var result = [],
                 i;
 
             if(level === destAxis) {
                 for(i = 0; i < array1.length; i++) {
-                    result[i + 1] = copy(array1[i]);
+                    result[i] = copy(array1[i]);
                 }
-                result[0] = copyScalar(level + 1);
+                result[i] = copyScalar(level + 1, scalar);
             } else if(level > destAxis) {
-                result = [copyScalar(level)].concat([copy(array1)]);
+                result = [copy(array1)].concat([copyScalar(level, scalar)]);
             } else {
                 for(i = 0; i < array1.length; i++) {
-                    result[i] = concatScalar(array1[i], level + 1);
+                    result[i] = concatScalarRight(array1[i], scalar, level + 1);
                 }
             }
             return result;
@@ -1763,7 +1783,7 @@
             rhoVector = rho(array1);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
-            return concatScalarRight(array1, 1);
+            return concatScalarRight(array1, array2, 1);
         } else if(!isArray(array1)) {
             if(array2.length === 0) {
                 return array1;
@@ -1771,7 +1791,7 @@
             rhoVector = rho(array2);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
-            return concatScalar(array2, 1);
+            return concatScalar(array1, array2, 1);
         } else if(array1.length === 0 || array2.length === 0) {
             throw new Error("LENGTH ERROR");
         } else {
