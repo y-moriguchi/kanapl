@@ -614,6 +614,15 @@ describe("KANAPL", function () {
             ok(env, "3 1 2〆2 2 3ρ'ABCDEFGHIJKL'", [[["A", "G"], ["B", "H"], ["C", "I"]], [["D", "J"], ["E", "K"], ["F", "L"]]]);
             ok(env, "2 1 1〆2 2 3ρ'ABCDEFGHIJKL'", [["A", "G"], ["E", "K"]]);
         });
+
+        it("iota", function() {
+            var env = KANAPL();
+
+            ok(env, "ι3", [1, 2, 3]);
+            ok(env, "'ABCDEF'ι'EDBH'", [5, 4, 2, 7]);
+            ok(env, "1 2 3 4ι2", 2);
+            ok(env, "'ABCDEF'ι2 4ρ'EDBH'", [[5, 4, 2, 7], [5, 4, 2, 7]]);
+        });
     });
 });
 
