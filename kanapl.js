@@ -1220,8 +1220,12 @@
             }
         }
 
-        walk(array1, []);
-        return result;
+        if(isArray(array1)) {
+            walk(array1, []);
+            return result;
+        } else {
+            return array1;
+        }
     }
 
     function substituteArray(vector, array1) {
@@ -1568,7 +1572,7 @@
             if(!isNumber(rotated)) {
                 throw new Error("DOMAIN ERROR");
             }
-            rotated = rotated < 0 ? rotated + rhoVector[destAxis - 1] : rotated;
+            rotated = rotated < 0 ? (rotated % rhoVector[destAxis - 1]) + rhoVector[destAxis - 1] : rotated;
             inIndices[destAxis - 1] = rotated;
             if(inIndices[destAxis - 1] >= rhoVector[destAxis - 1]) {
                 inIndices[destAxis - 1] -= rhoVector[destAxis - 1];
@@ -1620,7 +1624,9 @@
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
         } else if(!isArray(array1)) {
-            if(array2.length === 0) {
+            if(!isArray(array2)) {
+                return array2;
+            } else if(array2.length === 0) {
                 return [];
             }
             rhoVector = rho(arrayFixed2);
