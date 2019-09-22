@@ -1828,13 +1828,13 @@
             vectorFixed1 = isArray(vector1) ? vector1 : [vector1],
             arrayFixed1 = isArray(array1) ? array1 : [array1];
 
-        function pad(type) {
+        function pad(type, length) {
             var result = [],
                 i;
 
             if(isArray(type)) {
-                for(i = 0; i < type.length; i++) {
-                    result[i] = pad(type[i]);
+                for(i = 0; i < length; i++) {
+                    result[i] = pad(type[0], length);
                 }
                 return result;
             } else {
@@ -1848,10 +1848,10 @@
                     i;
 
                 for(i = 0; i < iEnd - iStart; i++) {
-                    if(i < array0.length) {
+                    if(i + iStart >= 0 && i + iStart < array0.length) {
                         result[i] = take(array0[i + iStart], level + 1);
                     } else {
-                        result[i] = pad(result[0]);
+                        result[i] = pad(array0[0], iEnd - iStart);
                     }
                 }
                 return result;
