@@ -1414,17 +1414,60 @@
             return result;
         }
 
-        checkVectorByFunction(vector, function(x) { return true; });
+        function replicate(array0, times, level) {
+            var result = [],
+                i,
+                j;
+
+            if(!isArray(array0)) {
+                return array0;
+            } else if(level === destAxis) {
+                for(i = 0; i < array0.length; i++) {
+                    for(j = 0; j < times; j++) {
+                        result[i * times + j] = replicate(array0[i], times, level + 1);
+                    }
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = replicate(array0[i], times, level + 1);
+                }
+            }
+            return result;
+        }
+
+        function replicateScalar(scalar, times) {
+            var result = [],
+                i;
+
+            for(i = 0; i < times; i++) {
+                result.push(scalar);
+            }
+            return result;
+        }
+
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
-        } else if(!isArray(array1)) {
-            return compScalar(array1);
-        } else if(array1.length === 0) {
-            throw new Error("LENGTH ERROR");
+        } else if(isNumber(vector)) {
+            if(!isArray(array1)) {
+                return replicateScalar(array1, vector);
+            } else if(array1.length === 0) {
+                return [];
+            } else {
+                rhoVector = rho(array1);
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                return replicate(array1, vector, 1);
+            }
         } else {
-            rhoVector = rho(array1);
-            destAxis = axis === null ? rho(rhoVector)[0] : axis;
-            return comp(array1, 1);
+            checkVectorByFunction(vector, function(x) { return true; });
+            if(!isArray(array1)) {
+                return compScalar(array1);
+            } else if(array1.length === 0) {
+                throw new Error("LENGTH ERROR");
+            } else {
+                rhoVector = rho(array1);
+                destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                return comp(array1, 1);
+            }
         }
     }
 
