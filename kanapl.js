@@ -1852,6 +1852,21 @@
     }
 
     function pickUpArray(array1, pickUpIndices) {
+        function arrayIndices(array0, pickupArray, indices) {
+            var result,
+                i;
+
+            if(!isArray(pickupArray)) {
+                return pickUp(array0[pickupArray - 1], indices);
+            } else {
+                result = [];
+                for(i = 0; i < pickupArray.length; i++) {
+                    result[i] = arrayIndices(array0, pickupArray[i], indices);
+                }
+                return result;
+            }
+        }
+
         function pickUp(array0, indices) {
             var result,
                 i;
@@ -1862,22 +1877,15 @@
                 if(!isInteger(indices[0]) || indices[0] < 1 || indices[0] > array0.length) {
                     throw new Error("INDEX ERROR");
                 }
-                return pickUp(array0[indices[0] - 1], pickUpIndices.slice(1));
+                return pickUp(array0[indices[0] - 1], indices.slice(1));
             } else if(indices[0] === null) {
                 result = [];
                 for(i = 0; i < array0.length; i++) {
-                    result[i] = pickUp(array0[i], pickUpIndices.slice(1));
+                    result[i] = pickUp(array0[i], indices.slice(1));
                 }
                 return result;
             } else if(isArray(indices[0])) {
-                result = [];
-                for(i = 0; i < indices[0].length; i++) {
-                    if(!isInteger(indices[0][i]) || indices[0][i] < 1 || indices[0][i] > array0.length) {
-                        throw new Error("INDEX ERROR");
-                    }
-                    result[i] = pickUp(array0[indices[0][i] - 1], pickUpIndices.slice(1));
-                }
-                return result;
+                return arrayIndices(array0, indices[0], indices.slice(1));
             } else {
                 throw new Error("DOMAIN ERROR");
             }
@@ -2586,8 +2594,9 @@
             }
             while(program.charAt(result1.lastIndex) === ";") {
                 result1 = skipBlank(result1.lastIndex, result1.attr);
-                if(/;\]/.test(program.charAt(result1.lastIndex + 1))) {
+                if(/[;\]]/.test(program.charAt(result1.lastIndex + 1))) {
                     result.push(null);
+                    result1 = skipBlank(result1.lastIndex + 1, result1.attr);
                 } else if(!(result1 = walk(skipBlankIndex(result1.lastIndex + 1), []))) {
                     throw new Error("SYNTAX ERROR");
                 } else {
