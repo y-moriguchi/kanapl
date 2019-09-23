@@ -2025,13 +2025,13 @@
                     return element === array0;
                 }
             }
-            return elem(array1);
+            return elem(array2);
         }
 
-        if(!isArray(array2)) {
-            return isElement(array2) ? 1 : 0;
+        if(!isArray(array1)) {
+            return isElement(array1) ? 1 : 0;
         } else {
-            return map(array2, isElement);
+            return map(array1, isElement);
         }
     }
 
@@ -2607,12 +2607,20 @@
         }
 
         function walkPickUp(index, attr) {
-            var result;
+            var result,
+                index1;
 
             if(program.charAt(index) !== "[") {
                 return null;
             }
-            result = walkPickUpElement(skipBlankIndex(index + 1), attr);
+            index1 = skipBlankIndex(index + 1);
+            if(program.charAt(index1) === "]") {
+                return {
+                    lastIndex: skipBlankIndex(index1),
+                    attr: attr.length > 1 ? attr : attr[0]
+                }
+            }
+            result = walkPickUpElement(index1, attr);
             if(program.charAt(result.lastIndex) !== "]") {
                 throw new Error("SYNTAX ERROR");
             }
