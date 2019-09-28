@@ -10,9 +10,47 @@
  * This test case is described for Jasmine.
  */
 describe("KANAPL", function () {
+    function isNumber(anObject) {
+        return typeof anObject === "number";
+    }
+
+    function isString(anObject) {
+        return typeof anObject === "string";
+    }
+
+    function isArray(anObject) {
+        return Object.prototype.toString.call(anObject) === '[object Array]';
+    }
+
     function ok(env, program, expected) {
         var result = env.eval(program);
 
+        expect(result).toEqual(expected);
+    }
+
+    function round(array0, precision) {
+        var result = [],
+            i;
+
+        if(isArray(array0)) {
+            for(i = 0; i < array0.length; i++) {
+                result[i] = round(array0[i], precision);
+            }
+            return result;
+        } else if(array0 === 0) {
+            return 0;
+        } else if(isNumber(array0)) {
+            result = Math.round(array0 * Math.pow(10, precision)) / Math.pow(10, precision);
+            return result;
+        } else {
+            return array0;
+        }
+    }
+
+    function okPrec(env, program, precision, expected) {
+        var result = env.eval(program);
+
+        result = round(result, precision);
         expect(result).toEqual(expected);
     }
 
@@ -666,10 +704,63 @@ describe("KANAPL", function () {
             ok(env, "A[♭A]", [90, 70, 50, 30, 10]);
         });
 
+        it("domino", function() {
+            var env = KANAPL();
+
+            okPrec(env, "※2 2ρ3 1 5 2", 8, [[2, -1], [-5, 3]]);
+            okPrec(env, "※4 4ρ3 3 ￣5 ￣6 1 2 ￣3 ￣1 2 3 ￣5 ￣3 ￣1 0 0 1", 8,
+                [[-0.5, 0, 0.5, -1.5], [1.5, 5, -4.5, 0.5], [1, 3, -3, 0], [-0.5, 0, 0.5, -0.5]]);
+            okPrec(env, "※3 3ρ0 2 0 0 0 1 4 0 0", 8, [[0, 0, 0.25], [0.5, 0, 0], [0, 1, 0]]);
+            okPrec(env, "(4 5)※2 2ρ3 1 5 2", 8, [3, -5]);
+            okPrec(env, "(1 1 1)※3 3ρ0 2 0 0 0 1 4 0 0", 8, [0.25, 0.5, 1]);
+            okPrec(env, "(7 6 5 8 7 6 3 4 6)※9 2ρ2 8 3 3 1 5", 8, [1.26553672, 0.56497175]);
+        });
+
+        it("encode", function() {
+            var env = KANAPL();
+
+            ok(env, "16┬15", 15);
+            ok(env, "2 2 2 2┬15", [1, 1, 1, 1]);
+            ok(env, "1760 3 12┬75", [2, 0, 3]);
+            ok(env, "(3 3ρ1 2 3)┬15", [[0, 1, 1], [0, 1, 2], [0, 1, 0]]);
+            ok(env, "(3 3 3ρ7 6 5 3 4 6 2 7)┬15", [[[2, 0, 0], [1, 2, 2], [1, 1, 1]], [[0, 0, 1], [2, 2, 0], [1, 1, 3]], [[0, 1, 0], [2, 0, 3], [1, 3, 0]]]);
+            ok(env, "2 2 2 2 2┬1 2 3 4 5", [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 1], [0, 1, 1, 0, 0], [1, 0, 1, 0, 1]]);
+            ok(env, "(3 3ρ2)┬3 4 6", [[[0, 1, 1], [0, 1, 1], [0, 1, 1]], [[1, 0, 1], [1, 0, 1], [1, 0, 1]], [[1, 0, 0], [1, 0, 0], [1, 0, 0]]]);
+            ok(env, "2 2 2┬3 3ρ3 4 6 2 7", [[[0, 1, 1], [0, 1, 0], [1, 1, 0]], [[1, 0, 1], [1, 1, 1], [0, 1, 1]], [[1, 0, 0], [0, 1, 1], [0, 0, 0]]]);
+            ok(env, "(3 3ρ7 6 5)┬3 3ρ3 4 6 2 7",
+                [[[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]],
+                    [[[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[0, 0, 1], [0, 1, 0], [0, 1, 0]], [[0, 0, 1], [0, 1, 0], [0, 1, 0]]],
+                    [[[3, 4, 6], [2, 0, 3], [4, 6, 2]], [[3, 4, 0], [2, 1, 3], [4, 0, 2]], [[3, 4, 1], [2, 2, 3], [4, 1, 2]]]]);
+        });
+
+        it("decode", function() {
+            var env = KANAPL();
+
+            ok(env, "16⊥3", 3);
+            ok(env, "10⊥7 6 5", 765);
+            ok(env, "10⊥3 3ρ7 8 3 6 7 4 5 6 6", [765, 876, 346]);
+            ok(env, "10⊥2 2 2ρ7 6 5", [[76, 65], [57, 76]]);
+            ok(env, "2 2 2 2⊥1 1 1 1", 15);
+            ok(env, "(3 3ρ7 6 5 2 7)⊥3 4 6", [116, 181, 44]);
+            ok(env, "(2 2 2ρ7 6 5)⊥2 7", [[19, 21], [17, 19]]);
+            ok(env, "3 4 6⊥(3 3ρ7 6 5 2 7)", [186, 191, 164]);
+            ok(env, "7 2⊥(2 2 2ρ 7 6 5)", [[20, 17], [17, 20]]);
+        });
+
         it("execute", function() {
             var env = KANAPL();
 
             ok(env, "♪'765+346'", 1111);
+        });
+
+        it("format", function() {
+            var env = KANAPL();
+
+            ok(env, "◆765.346", ["7", "6", "5", ".", "3", "4", "6"]);
+            ok(env, "(5 2)◆1.7 2.36 ￣4.92", [" ", "1", ".", "7", "0", " ", "2", ".", "3", "6", "￣", "4", ".", "9", "2"]);
+            ok(env, "(8 ￣2)◆1.7 2.36 ￣4.92",
+                [" ", " ", " ", "1", ".", "7", "E", "0", " ", " ", " ", "2", ".", "4", "E", "0", " ", " ", "￣", "4", ".", "9", "E", "0"]);
+            ok(env, "(8 ￣2)◆7.65E27", [" ", " ", "7", ".", "7", "E", "2", "7"]);
         });
     });
 });

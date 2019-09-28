@@ -2089,7 +2089,11 @@
                     }
                     fold1 = fold1 * base + val;
                 }
-                setIndex(result, indicesArray1.concat(indicesArray2), fold1);
+                if(indicesArray1.length + indicesArray2.length > 0) {
+                    setIndex(result, indicesArray1.concat(indicesArray2), fold1);
+                } else {
+                    result = fold1;
+                }
             }
         }
 
@@ -2112,6 +2116,31 @@
             }
         }
 
+        function decodeScalarLeft(scalar, indicesArray2, rhoArray2) {
+            var fold1,
+                i,
+                val;
+
+            if(rhoArray2.length > 0) {
+                for(i = 0; i < rhoArray2[0]; i++) {
+                    decodeScalarLeft(scalar, indicesArray2.concat([i]), rhoArray2.slice(1));
+                }
+            } else {
+                fold1 = val = getIndex(array2, [0].concat(indicesArray2));
+                for(i = 1; i < rhoArray2a; i++) {
+                    if(i < rhoArray2a) {
+                        val = getIndex(array2, [i].concat(indicesArray2));
+                    }
+                    fold1 = fold1 * scalar + val;
+                }
+                if(indicesArray2.length > 0) {
+                    setIndex(result, indicesArray2, fold1);
+                } else {
+                    result = fold1;
+                }
+            }
+        }
+
         checkArrayByFunction(array1, "DOMAIN ERROR", function(x) { return isNumber(x); });
         checkArrayByFunction(array2, "DOMAIN ERROR", function(x) { return isNumber(x); });
         if(!isArray(array1) && !isArray(array2)) {
@@ -2120,7 +2149,10 @@
             if(array2.length === 0) {
                 return [];
             }
-            return decodeArray([array1], array2);
+            rhoArray2 = rho(array2);
+            rhoArray2a = rhoArray2[0];
+            decodeScalarLeft(array1, [], rhoArray2.slice(1));
+            return result;
         } else if(isArray(array2)) {
             if(array1.length === 0 || array2.length === 0) {
                 return [];
@@ -2197,10 +2229,46 @@
             }
         }
 
+        function encodeScalarRight(array0) {
+            var result = [],
+                rhoArray0 = rho(array0),
+                i;
+
+            function inner1(indicesArray0, indicesArray2) {
+                var i,
+                    enc,
+                    base;
+
+                enc = array2;
+                for(i = rhoArray0[0] - 1; i >= 0; i--) {
+                    base = getIndex(array0, [i].concat(indicesArray0));
+                    setIndex(result, [i].concat(indicesArray0), enc % base);
+                    enc = Math.floor(enc / base);
+                }
+            }
+
+            if(!isArray(array0)) {
+                throw new Error("Internal error");
+            } else if(!isArray(array0[0])) {
+                inner1([]);
+            } else if(!isArray(array0[0][0])) {
+                for(i = 0; i < array0[0].length; i++) {
+                    inner1([i]);
+                }
+            } else {
+                for(i = 0; i < array0.length; i++) {
+                    result[i] = encodeScalarRight(array0[i]);
+                }
+            }
+            return result;
+        }
+
         checkArrayByFunction(array1, "DOMAIN ERROR", function(x) { return isNumber(x); });
         checkArrayByFunction(arrayFixed2, "DOMAIN ERROR", function(x) { return isNumber(x); });
         if(!isArray(array1)) {
-            return encodeScalar(arrayFixed2);
+            return encodeScalar(array2);
+        } else if(!isArray(array2)) {
+            return encodeScalarRight(array1);
         } else {
             return encode(array1);
         }
@@ -2218,7 +2286,7 @@
                 }
                 resultString = array0.toString();
                 resultString = resultString.replace(/-/, "￣");
-                resultString = resultString.replace(/e/, "E");
+                resultString = resultString.replace(/e\+?/, "E");
                 return stringToCharArray(resultString);
             } else if(!isArray(array0[0])) {
                 for(i = 0; i < array0.length; i++) {
@@ -2408,7 +2476,7 @@
     }
 
     function parseAPL(program, env) {
-        var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?/g,
+        var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?(E[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
             VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]+/g,
