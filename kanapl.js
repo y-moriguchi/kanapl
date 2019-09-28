@@ -583,6 +583,17 @@
     };
 
     var MAP_APL_CHAR = {
+        "\u00af": "￣",
+        "\u2206": "△",
+        "\u2218": "・",
+        "\u2223": "|",
+        "\u223c": "～",
+        "\u2264": "≦",
+        "\u2265": "≧",
+        "\u2308": "「",
+        "\u230a": "」",
+        "\u22a4": "┬",
+        "\u22c6": "★",
         "\u2339": "※",
         "\u233d": "φ",
         "\u233f": "/[1]",
@@ -639,7 +650,7 @@
         "\\-": "\\[1]",
         "rotate": "φ",
         "rotate1": "φ[1]",
-        "tranpose": "〆",
+        "transpose": "〆",
         "iota": "ι",
         "in": "∈",
         "asc": "♯",
@@ -2475,6 +2486,33 @@
         return result;
     }
 
+
+    function convertChar(program) {
+        var result = program,
+            PTN_KEYWORD = /('[^'\n]+')|(?:#([^#\n]+)#)/g;
+
+        function convertASCII(entire, quote, keyword) {
+            var result;
+
+            if(quote) {
+                return quote;
+            } else {
+                result = MAP_ASCII_STR[keyword];
+                if(!result) {
+                    throw new Error("Invalid keyword: " + keyword);
+                }
+                return result;
+            }
+        }
+
+        result = result.replace(/　/g, " ");
+        result = result.trim();
+        result = mapHomomorphism(MAP_APL_CHAR, result);
+        result = mapHomomorphism(MAP_FULLWIDTH, result);
+        result = result.replace(PTN_KEYWORD, convertASCII);
+        return result;
+    }
+
     function parseAPL(program, env) {
         var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?(E[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
@@ -2818,7 +2856,7 @@
                 };
             } else if(ch === "♪") {
                 result = walk(skipBlankIndex(index + 1), []);
-                toEval = charArrayToString(result.attr);
+                toEval = convertChar(charArrayToString(result.attr));
                 resultEval = parseAPL(toEval, env);
                 return {
                     lastIndex: result.lastIndex,
@@ -2887,33 +2925,7 @@
 
     function createEnv(env) {
         var innerEnv = env ? deepcopy(env) : {},
-            PTN_KEYWORD = /('[^'\n]+')|(?:#([^#\n]+)#)/g,
             me;
-
-        function convertASCII(entire, quote, keyword) {
-            var result;
-
-            if(quote) {
-                return quote;
-            } else {
-                result = MAP_ASCII_STR[keyword];
-                if(!result) {
-                    throw new Error("Invalid keyword: " + keyword);
-                }
-                return result;
-            }
-        }
-
-        function convertChar(program) {
-            var result = program;
-
-            result = result.replace(/　/g, " ");
-            result = result.trim();
-            result = mapHomomorphism(MAP_APL_CHAR, result);
-            result = mapHomomorphism(MAP_FULLWIDTH, result);
-            result = result.replace(PTN_KEYWORD, convertASCII);
-            return result;
-        }
 
         me = {
             put: function(name, anObject) {
