@@ -2479,7 +2479,7 @@
         var NUMBER = /[▲￣]?[0-9]+(\.[0-9]+)?(E[0-9]+)?/g,
             STRING = /'[^'\n]*'/g,
             BLANK = /[ \t]+/g,
-            VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]+/g,
+            VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*/g,
             ASSIGN = /←/,
             OUTERPRODUCT = /・./;
 
