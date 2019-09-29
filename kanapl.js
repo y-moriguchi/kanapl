@@ -1462,6 +1462,8 @@
 
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
+        } else if(vector.length === 0 && array1.length === 0) {
+            return [];
         } else if(isNumber(vector)) {
             if(!isArray(array1)) {
                 return replicateScalar(array1, vector);
@@ -1553,6 +1555,8 @@
             throw new Error("AXIS ERROR");
         } else if(!isArray(array1)) {
             return expandScalar(array1);
+        } else if(vector.length === 0 && array1.length === 0) {
+            return [];
         } else if(array1.length === 0) {
             throw new Error("LENGTH ERROR");
         } else {
@@ -1852,8 +1856,10 @@
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
             return concatScalar(array1, array2, 1);
-        } else if(array1.length === 0 || array2.length === 0) {
-            throw new Error("LENGTH ERROR");
+        } else if(array1.length === 0) {
+            return array2;
+        } else if(array2.length === 0) {
+            return array1;
         } else {
             rhoVector = rho(array2);
             rank = rho(rhoVector)[0];
@@ -2535,7 +2541,7 @@
             for(i = 1; i < aString.length - 1; i++) {
                 result[i - 1] = aString.charAt(i);
             }
-            return result.length > 1 ? result : result[0];
+            return result.length !== 1 ? result : result[0];
         }
 
         function getVariable(varName) {

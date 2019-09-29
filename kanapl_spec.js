@@ -54,9 +54,15 @@ describe("KANAPL", function () {
         expect(result).toEqual(expected);
     }
 
+    function emptyEnv() {
+        var env = KANAPL();
+
+        env.eval("E←''");
+        return env;
+    }
+
     beforeEach(function () {
     });
-
     describe("scalar functions", function () {
         it("addition", function () {
             var env = KANAPL();
@@ -879,6 +885,227 @@ describe("KANAPL", function () {
             ok(env, "1\u23710", 0);
             ok(env, "\u23733", [1, 2, 3]);
             ok(env, "2 2\u23741 2 3 4", [[1, 2], [3, 4]]);
+        });
+
+    });
+
+    describe("empty array", function() {
+        it("scalar function(monadic)", function() {
+            var env = emptyEnv();
+
+            ok(env, "-E", []);
+            ok(env, "#*#E", []);
+            ok(env, "#/#E", []);
+            ok(env, "|E", []);
+            ok(env, "#max#E", []);
+            ok(env, "#min#E", []);
+            ok(env, "#**#E", []);
+            ok(env, "#log#E", []);
+            ok(env, "#tri#E", []);
+            ok(env, "?E", []);
+            ok(env, "!E", []);
+            ok(env, "~E", []);
+        });
+
+        it("scalar function(dyadic)", function() {
+            var env = emptyEnv();
+
+            ok(env, "1+E", []);
+            ok(env, "1-E", []);
+            ok(env, "1#*#E", []);
+            ok(env, "1#/#E", []);
+            ok(env, "1|E", []);
+            ok(env, "1#max#E", []);
+            ok(env, "1#min#E", []);
+            ok(env, "1#**#E", []);
+            ok(env, "2#log#E", []);
+            ok(env, "1#tri#E", []);
+            ok(env, "1!E", []);
+            ok(env, "1<E", []);
+            ok(env, "1>E", []);
+            ok(env, "1#<=#E", []);
+            ok(env, "1#>=#E", []);
+            ok(env, "1=E", []);
+            ok(env, "1#!=#E", []);
+            ok(env, "1#and#E", []);
+            ok(env, "1#or#E", []);
+            ok(env, "1#nand#E", []);
+            ok(env, "1#nor#E", []);
+            ok(env, "E+1", []);
+            ok(env, "E-1", []);
+            ok(env, "1#*#E", []);
+            ok(env, "1#/#E", []);
+            ok(env, "E|1", []);
+            ok(env, "1#max#E", []);
+            ok(env, "1#min#E", []);
+            ok(env, "1#**#E", []);
+            ok(env, "2#log#E", []);
+            ok(env, "1#tri#E", []);
+            ok(env, "E!1", []);
+            ok(env, "E<1", []);
+            ok(env, "E>1", []);
+            ok(env, "1#<=#E", []);
+            ok(env, "1#>=#E", []);
+            ok(env, "E=1", []);
+            ok(env, "1#!=#E", []);
+            ok(env, "1#and#E", []);
+            ok(env, "1#or#E", []);
+            ok(env, "1#nand#E", []);
+            ok(env, "1#nor#E", []);
+            ok(env, "E+E", []);
+            ok(env, "E-E", []);
+            ok(env, "E#*#E", []);
+            ok(env, "E#/#E", []);
+            ok(env, "E|E", []);
+            ok(env, "E#max#E", []);
+            ok(env, "E#min#E", []);
+            ok(env, "E#**#E", []);
+            ok(env, "2#log#E", []);
+            ok(env, "E#tri#E", []);
+            ok(env, "E!E", []);
+            ok(env, "E<E", []);
+            ok(env, "E>E", []);
+            ok(env, "E#<=#E", []);
+            ok(env, "E#>=#E", []);
+            ok(env, "E=E", []);
+            ok(env, "E#!=#E", []);
+            ok(env, "E#and#E", []);
+            ok(env, "E#or#E", []);
+            ok(env, "E#nand#E", []);
+            ok(env, "E#nor#E", []);
+        });
+
+        it("compound operator", function() {
+            var env = emptyEnv();
+
+            ok(env, "+/E", 0);
+            ok(env, "-/E", 0);
+            ok(env, "×/E", 0);
+            ok(env, "÷/E", 0);
+            ok(env, "|/E", 0);
+            ok(env, "「/E", 0);
+            ok(env, "」/E", 0);
+            ok(env, "★/E", 0);
+            ok(env, "〇/E", 0);
+            ok(env, "☆/E", 0);
+            ok(env, "!/E", 0);
+            ok(env, "∧/E", 0);
+            ok(env, "∨/E", 0);
+            ok(env, "†/E", 0);
+            ok(env, "‡/E", 0);
+            ok(env, "</E", 0);
+            ok(env, "≦/E", 0);
+            ok(env, ">/E", 0);
+            ok(env, "≧/E", 0);
+            ok(env, "=/E", 0);
+            ok(env, "≠/E", 0);
+            ok(env, "+\\E", []);
+            ok(env, "-\\E", []);
+            ok(env, "×\\E", []);
+            ok(env, "÷\\E", []);
+            ok(env, "|\\E", []);
+            ok(env, "「\\E", []);
+            ok(env, "」\\E", []);
+            ok(env, "★\\E", []);
+            ok(env, "〇\\E", []);
+            ok(env, "☆\\E", []);
+            ok(env, "!\\E", []);
+            ok(env, "∧\\E", []);
+            ok(env, "∨\\E", []);
+            ok(env, "†\\E", []);
+            ok(env, "‡\\E", []);
+            ok(env, "<\\E", []);
+            ok(env, "≦\\E", []);
+            ok(env, ">\\E", []);
+            ok(env, "≧\\E", []);
+            ok(env, "=\\E", []);
+            ok(env, "≠\\E", []);
+            ok(env, "E+.+E", 0);
+            ok(env, "E+.-E", 0);
+            ok(env, "E+.×E", 0);
+            ok(env, "E+.÷E", 0);
+            ok(env, "E+.|E", 0);
+            ok(env, "E+.「E", 0);
+            ok(env, "E+.」E", 0);
+            ok(env, "E+.★E", 0);
+            ok(env, "E+.〇E", 0);
+            ok(env, "E+.☆E", 0);
+            ok(env, "E+.!E", 0);
+            ok(env, "E+.∧E", 0);
+            ok(env, "E+.∨E", 0);
+            ok(env, "E+.†E", 0);
+            ok(env, "E+.‡E", 0);
+            ok(env, "E+.<E", 0);
+            ok(env, "E+.≦E", 0);
+            ok(env, "E+.>E", 0);
+            ok(env, "E+.≧E", 0);
+            ok(env, "''+.=''", 0);
+            ok(env, "''+.≠''", 0);
+            ok(env, "E-.+E", 0);
+            ok(env, "E×.+E", 0);
+            ok(env, "E÷.+E", 0.0);
+            ok(env, "E|.+E", 0);
+            ok(env, "E「.+E", 0);
+            ok(env, "E」.+E", 0);
+            ok(env, "E★.+E", 0);
+            ok(env, "E〇.+E", 0);
+            ok(env, "E☆.+E", 0);
+            ok(env, "E!.+E", 0);
+            ok(env, "E∧.+E", 0);
+            ok(env, "E∨.+E", 0);
+            ok(env, "E†.+E", 0);
+            ok(env, "E‡.+E", 0);
+            ok(env, "E<.+E", 0);
+            ok(env, "E≦.+E", 0);
+            ok(env, "E>.+E", 0);
+            ok(env, "E≧.+E", 0);
+            ok(env, "E=.+E", 0);
+            ok(env, "E≠.+E", 0);
+            ok(env, "E・.+E", []);
+            ok(env, "E・.-E", []);
+            ok(env, "E・.×E", []);
+            ok(env, "E・.÷E", []);
+            ok(env, "E・.|E", []);
+            ok(env, "E・.「E", []);
+            ok(env, "E・.」E", []);
+            ok(env, "E・.★E", []);
+            ok(env, "E・.〇E", []);
+            ok(env, "E・.☆E", []);
+            ok(env, "E・.!E", []);
+            ok(env, "E・.∧E", []);
+            ok(env, "E・.∨E", []);
+            ok(env, "E・.†E", []);
+            ok(env, "E・.‡E", []);
+            ok(env, "E・.<E", []);
+            ok(env, "E・.≦E", []);
+            ok(env, "E・.>E", []);
+            ok(env, "E・.≧E", []);
+            ok(env, "E・.=E", []);
+            ok(env, "E・.≠E", []);
+        });
+
+        it("mixed operator", function() {
+            var env = emptyEnv();
+
+            ok(env, "#rho#E", 0);
+            ok(env, ",E", []);
+            ok(env, "E,E", []);
+            ok(env, "2 3,E", [2, 3]);
+            ok(env, "E,2 3", [2, 3]);
+            ok(env, "2 2#rho#1 2 3 4,E", [[1, 2], [3, 4]]);
+            ok(env, "E,2 2#rho#1 2 3 4", [[1, 2], [3, 4]]);
+            ok(env, "E/E", []);
+            ok(env, "E\\E", []);
+            ok(env, "#rotate#E", []);
+            ok(env, "2#rotate#E", []);
+            ok(env, "#transpose#E", []);
+            ok(env, "1 2#iota#E", []);
+            ok(env, "E#iota#2 2#rho#1 2 3 4", [[1, 1], [1, 1]]);
+            ok(env, "1 2#in#E", [0, 0]);
+            ok(env, "E#in#2 2#rho#1 2 3 4", []);
+            ok(env, "#asc#E", []);
+            ok(env, "#desc#E", []);
+            ok(env, "#tostring#''", []);
         });
     });
 });
