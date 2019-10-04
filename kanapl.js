@@ -1158,7 +1158,9 @@
 
     function getIndex(array1, indexVector) {
         if(isArray(array1)) {
-            if(!isInteger(indexVector[0])) {
+            if(indexVector.length === 0) {
+                return array1;
+            } else if(!isInteger(indexVector[0])) {
                 throw new Error("DOMAIN ERROR");
             } else if(indexVector[0] < 0 || indexVector[0] >= array1.length) {
                 throw new Error("INDEX ERROR");
@@ -1914,6 +1916,59 @@
             throw new Error("INDEX ERROR");
         } else {
             return pickUp(array1, pickUpIndices);
+        }
+    }
+
+    function assignArray(array1, lval, rval) {
+        function assign(leftIndices, lval, rval) {
+            var lvalue,
+                i;
+
+            if(isArray(lval) && lval.length === 0) {
+                if(isArray(rval)) {
+                    throw new Error("RANK ERROR");
+                }
+                setIndex(array1, leftIndices, rval);
+            } else if(isNumber(lval[0])) {
+                lvalue = getIndex(array1, leftIndices);
+                if(!isArray(lvalue)) {
+                    throw new Error("RANK ERROR");
+                } else if(!isInteger(lval[0]) || lval[0] < 1 || lval[0] > array1.length) {
+                    throw new Error("INDEX ERROR");
+                }
+                return assign(leftIndices.concat([lval[0] - 1]), lval.slice(1), rval);
+            } else if(lval[0] === null) {
+                lvalue = getIndex(array1, leftIndices);
+                if(!isArray(lvalue) || !isArray(rval)) {
+                    throw new Error("RANK ERROR");
+                } else if(lvalue.length !== rval.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                for(i = 0; i < rval.length; i++) {
+                    assign(leftIndices.concat([i]), lval.slice(1), rval[i]);
+                }
+            } else if(isArray(lval[0])) {
+                lvalue = getIndex(array1, leftIndices);
+                if(!isArray(lvalue) || !isArray(rval)) {
+                    throw new Error("RANK ERROR");
+                } else if(lval[0].length !== rval.length) {
+                    throw new Error("LENGTH ERROR");
+                }
+                for(i = 0; i < rval.length; i++) {
+                    assign(leftIndices.concat([lval[0][i] - 1]), lval.slice(1), rval[i]);
+                }
+            } else {
+                throw new Error("DOMAIN ERROR");
+            }
+        }
+
+        if(!isArray(array1)) {
+            throw new Error("RANK ERROR");
+        } else if(array1.length === 0) {
+            return array1;
+        } else {
+            assign([], lval, rval);
+            return array1;
         }
     }
 
@@ -2741,7 +2796,9 @@
 
         function walkVariablePickUp(index, attr) {
             var result,
-                varName;
+                resultRval,
+                varName,
+                index1;
 
             if(!(result = parseRegex(VARIABLE, K, index, attr))) {
                 return null;
@@ -2755,7 +2812,15 @@
             if(program.charAt(result.lastIndex) !== "]") {
                 throw new Error("SYNTAX ERROR");
             }
-            return skipBlank(skipBlankIndex(result.lastIndex + 1), pickUpArray(getVariable(varName), result.attr))
+
+            index1 = skipBlankIndex(result.lastIndex + 1);
+            if(ASSIGN.test(program.charAt(index1))) {
+                index1 = skipBlankIndex(index1 + 1);
+                resultRval = walk(index1, []);
+                return skipBlank(result.lastIndex, assignArray(getVariable(varName), result.attr, resultRval.attr));
+            } else {
+                return skipBlank(index1, pickUpArray(getVariable(varName), result.attr))
+            }
         }
 
         function walkAfterMonadic(index, attr) {
