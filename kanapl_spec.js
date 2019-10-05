@@ -1333,5 +1333,13 @@ describe("KANAPL", function () {
             ng(env, "1 A 2", "DOMAIN ERROR");
         });
     });
+
+    describe("program test", function() {
+        it("prime number", function() {
+            var env = KANAPL();
+
+            ok(env, "(~R∈R・.×R)/R←1↓ι10", [2, 3, 5, 7]);
+        });
+    });
 });
 

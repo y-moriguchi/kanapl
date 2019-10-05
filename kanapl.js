@@ -593,6 +593,7 @@
     var MAP_APL_CHAR = {
         "\u00af": "￣",
         "\u2206": "△",
+        "\u220a": "∈",
         "\u2218": "・",
         "\u2223": "|",
         "\u223c": "～",
@@ -673,6 +674,10 @@
 
     function K(x) {
         return x;
+    }
+
+    function isObject(anObject) {
+        return typeof anObject === "object" && anObject !== null;
     }
 
     function isNumber(anObject) {
@@ -1317,96 +1322,100 @@
         return result;
     }
 
-    function foldOperator(operator, axis) {
-        if(axis !== null && !isInteger(axis)) {
-            throw new Error("AXIS ERROR");
-        }
+    function foldOperator(operator) {
+        return function(axis) {
+            if(axis !== null && !isInteger(axis)) {
+                throw new Error("AXIS ERROR");
+            }
 
-        return function(array1) {
-            var rhoVector = rho(array1),
-                destAxis;
+            return function(array1) {
+                var rhoVector = rho(array1),
+                    destAxis;
 
-            function foldop(array0, level) {
-                var i,
-                    result;
+                function foldop(array0, level) {
+                    var i,
+                        result;
 
-                if(!isArray(array0)) {
-                    return array0;
-                } else if(level === destAxis) {
-                    for(i = 0; i < array0.length; i++) {
-                        if(i > 0) {
-                            result = operator(result, foldop(array0[i], level + 1));
-                        } else {
-                            result = foldop(array0[i], level + 1);
+                    if(!isArray(array0)) {
+                        return array0;
+                    } else if(level === destAxis) {
+                        for(i = 0; i < array0.length; i++) {
+                            if(i > 0) {
+                                result = operator(result, foldop(array0[i], level + 1));
+                            } else {
+                                result = foldop(array0[i], level + 1);
+                            }
                         }
-                    }
-                } else {
-                    result = [];
-                    for(i = 0; i < array0.length; i++) {
-                        result[i] = foldop(array0[i], level + 1);
-                    }
-                }
-                return result;
-            }
-
-            if(!isArray(array1)) {
-                return array1;
-            } else if(array1.length === 0) {
-                return 0;
-            } else {
-                destAxis = axis === null ? rho(rhoVector)[0] : axis;
-                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
-                    throw new Error("AXIS ERROR");
-                }
-                return foldop(array1, 1);
-            }
-        };
-    }
-
-    function scanOperator(operator, axis) {
-        if(axis !== null && !isInteger(axis)) {
-            throw new Error("AXIS ERROR");
-        }
-
-        return function(array1) {
-            var rhoVector = rho(array1),
-                destAxis;
-
-            function foldop(array0, level) {
-                var i,
-                    result;
-
-                if(!isArray(array0)) {
-                    return array0;
-                } else if(level === destAxis) {
-                    result = [];
-                    for(i = 0; i < array0.length; i++) {
-                        if(i > 0) {
-                            result[i] = operator(result[i - 1], foldop(array0[i], level + 1));
-                        } else {
+                    } else {
+                        result = [];
+                        for(i = 0; i < array0.length; i++) {
                             result[i] = foldop(array0[i], level + 1);
                         }
                     }
-                } else {
-                    result = [];
-                    for(i = 0; i < array0.length; i++) {
-                        result[i] = foldop(array0[i], level + 1);
-                    }
+                    return result;
                 }
-                return result;
+
+                if(!isArray(array1)) {
+                    return array1;
+                } else if(array1.length === 0) {
+                    return 0;
+                } else {
+                    destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                    if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                        throw new Error("AXIS ERROR");
+                    }
+                    return foldop(array1, 1);
+                }
+            };
+        };
+    }
+
+    function scanOperator(operator) {
+        return function(axis) {
+            if(axis !== null && !isInteger(axis)) {
+                throw new Error("AXIS ERROR");
             }
 
-            if(!isArray(array1)) {
-                return array1;
-            } else if(array1.length === 0) {
-                return [];
-            } else {
-                destAxis = axis === null ? rho(rhoVector)[0] : axis;
-                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
-                    throw new Error("AXIS ERROR");
+            return function(array1) {
+                var rhoVector = rho(array1),
+                    destAxis;
+
+                function foldop(array0, level) {
+                    var i,
+                        result;
+
+                    if(!isArray(array0)) {
+                        return array0;
+                    } else if(level === destAxis) {
+                        result = [];
+                        for(i = 0; i < array0.length; i++) {
+                            if(i > 0) {
+                                result[i] = operator(result[i - 1], foldop(array0[i], level + 1));
+                            } else {
+                                result[i] = foldop(array0[i], level + 1);
+                            }
+                        }
+                    } else {
+                        result = [];
+                        for(i = 0; i < array0.length; i++) {
+                            result[i] = foldop(array0[i], level + 1);
+                        }
+                    }
+                    return result;
                 }
-                return foldop(array1, 1);
-            }
+
+                if(!isArray(array1)) {
+                    return array1;
+                } else if(array1.length === 0) {
+                    return [];
+                } else {
+                    destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                    if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                        throw new Error("AXIS ERROR");
+                    }
+                    return foldop(array1, 1);
+                }
+            };
         };
     }
 
@@ -2583,21 +2592,23 @@
         }
     }
 
-    function outerProduct(fn, array1, array2) {
-        function walk(array1) {
-            var result = [],
-                i;
+    function outerProduct(fn) {
+        return function(array1, array2) {
+            function walk(array1) {
+                var result = [],
+                    i;
 
-            if(isArray(array1)) {
-                for(i = 0; i < array1.length; i++) {
-                    result[i] = walk(array1[i]);
+                if(isArray(array1)) {
+                    for(i = 0; i < array1.length; i++) {
+                        result[i] = walk(array1[i]);
+                    }
+                    return result;
+                } else {
+                    return map2Scalar(array1, array2, fn);
                 }
-                return result;
-            } else {
-                return map2Scalar(array1, array2, fn);
             }
-        }
-        return walk(array1);
+            return walk(array1);
+        };
     }
 
     function mapSingle(vector, action) {
@@ -2673,10 +2684,7 @@
         }
 
         function getVariable(varName) {
-            if(env[varName] === undef) {
-                throw new Error("VALUE ERROR");
-            }
-            return env[varName];
+            return varName;
         }
 
         function skipBlankIndex(index) {
@@ -2753,35 +2761,45 @@
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: compressArray(attr, result.attr, resultAxis.attr)
+                    attr: {
+                        apply: [compressArray, attr, result.attr, resultAxis.attr]
+                    }
                 };
             } else if(ch === "\\") {
                 resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: expandArray(attr, result.attr, resultAxis.attr)
+                    attr: {
+                        apply: [expandArray, attr, result.attr, resultAxis.attr]
+                    }
                 };
             } else if(ch === "φ") {
                 resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: rotateArray(attr, result.attr, resultAxis.attr)
+                    attr: {
+                        apply: [rotateArray, attr, result.attr, resultAxis.attr]
+                    }
                 };
             } else if(ch === ",") {
                 resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: concatenateArray(attr, result.attr, resultAxis.attr)
+                    attr: {
+                        apply: [concatenateArray, attr, result.attr, resultAxis.attr]
+                    }
                 };
             } else if(dyadic[ch]) {
                 resultOp = walkOperator(skipBlankIndex(index + 1), dyadic[ch]);
                 result = walk(resultOp.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: resultOp.attr(attr, result.attr)
+                    attr: {
+                        apply: [resultOp.attr, attr, result.attr]
+                    }
                 };
             } else if(OUTERPRODUCT.test(program.substring(index, index + 2))) {
                 if(!(outerOp = dyadic[program.charAt(index + 2)])) {
@@ -2790,7 +2808,9 @@
                 result = walk(skipBlankIndex(index + 3), []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: outerProduct(outerOp, attr, result.attr)
+                    attr: {
+                        apply: [outerProduct(outerOp), attr, result.attr]
+                    }
                 };
             } else {
                 return skipBlank(index, attr);
@@ -2811,8 +2831,12 @@
             }
             rval = walk(skipBlankIndex(result.lastIndex + 1), []);
             if(rval) {
-                env[varName] = rval.attr;
-                return skipBlank(rval.lastIndex, rval.attr);
+                return skipBlank(rval.lastIndex, {
+                    assign: {
+                        name: result.attr,
+                        val: rval.attr
+                    }
+                });
             } else {
                 return null;
             }
@@ -2820,7 +2844,8 @@
 
         function walkPickUpElement(index) {
             var result = [],
-                result1;
+                result1,
+                i;
 
             if(program.charAt(index) === ";") {
                 result.push(null);
@@ -2843,6 +2868,10 @@
                     result.push(result1.attr);
                 }
             }
+
+            for(i = 0; i < result.length; i++) {
+                result[i] = execInternal(result[i], env);
+            }
             return skipBlank(result1.lastIndex, result);
         }
 
@@ -2864,7 +2893,9 @@
             if(program.charAt(result.lastIndex) !== "]") {
                 throw new Error("SYNTAX ERROR");
             }
-            return skipBlank(skipBlankIndex(result.lastIndex + 1), pickUpArray(attr.length > 1 ? attr : attr[0], result.attr))
+            return skipBlank(skipBlankIndex(result.lastIndex + 1), {
+                apply: [pickUpArray, attr.length > 1 ? attr : attr[0], result.attr]
+            });
         }
 
         function walkVariablePickUp(index, attr) {
@@ -2890,9 +2921,13 @@
             if(ASSIGN.test(program.charAt(index1))) {
                 index1 = skipBlankIndex(index1 + 1);
                 resultRval = walk(index1, []);
-                return skipBlank(result.lastIndex, assignArray(getVariable(varName), result.attr, resultRval.attr));
+                return skipBlank(result.lastIndex, {
+                    apply: [assignArray, { variable: varName }, result.attr, resultRval.attr]
+                });
             } else {
-                return skipBlank(index1, pickUpArray(getVariable(varName), result.attr))
+                return skipBlank(index1, {
+                    apply: [pickUpArray, { variable: varName }, result.attr]
+                });
             }
         }
 
@@ -2912,16 +2947,21 @@
             } else if(!!(result = walkVariablePickUp(index, attr))) {
                 return result;
             } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr)) ||
-                    !!(result = parseRegex(STRING, getString, index, attr)) ||
-                    !!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
+                    !!(result = parseRegex(STRING, getString, index, attr))) {
                 resultConcat = attr.concat([result.attr]);
-                checkProperArray(resultConcat, true);
+                return walkAfterMonadic(result.lastIndex, resultConcat);
+            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
+                resultConcat = attr.concat([{
+                    variable: result.attr
+                }]);
                 return walkAfterMonadic(result.lastIndex, resultConcat);
             } else {
                 if(attr.length === 0) {
                     throw new Error("SYNTAX ERROR");
                 }
-                return walkFunction(index, attr.length > 1 ? attr : attr[0]);
+                return walkFunction(index, {
+                    "createArray": attr.length > 1 ? attr : attr[0]
+                });
             }
         }
 
@@ -2946,13 +2986,17 @@
                 result = walkFoldAxis(skipBlankIndex(index + 1));
                 return {
                     lastIndex: result.lastIndex,
-                    attr: foldOperator(attr, result.attr)
+                    attr: execInternal({
+                        apply: [foldOperator(attr), result.attr]
+                    }, env)
                 };
             } else if(program.charAt(index) === "\\") {
                 result = walkFoldAxis(skipBlankIndex(index + 1));
                 return {
                     lastIndex: result.lastIndex,
-                    attr: scanOperator(attr, result.attr)
+                    attr: execInternal({
+                        apply: [scanOperator(attr), result.attr]
+                    }, env)
                 };
             } else {
                 return null;
@@ -2981,7 +3025,9 @@
                     result = walk(resultFold.lastIndex, []);
                     return {
                         lastIndex: result.lastIndex,
-                        attr: resultFold.attr(result.attr)
+                        attr: {
+                            apply: [resultFold.attr, result.attr]
+                        }
                     };
                 }
             }
@@ -2990,28 +3036,74 @@
                 result = walk(skipBlankIndex(index + 1), []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: monadic[ch](result.attr)
+                    attr: {
+                        apply: [monadic[ch], result.attr]
+                    }
                 };
             } else if(ch === "φ") {
                 resultAxis = walkFoldAxis(skipBlankIndex(index + 1));
                 result = walk(resultAxis.lastIndex, []);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: reverseArray(result.attr, resultAxis.attr)
+                    attr: {
+                        apply: [reverseArray, result.attr, resultAxis.attr]
+                    }
                 };
             } else if(ch === "♪") {
                 result = walk(skipBlankIndex(index + 1), []);
-                toEval = convertChar(charArrayToString(result.attr));
-                resultEval = parseAPL(toEval, env);
                 return {
                     lastIndex: result.lastIndex,
-                    attr: resultEval
+                    attr: {
+                        eval: result.attr
+                    }
                 };
             } else {
                 return walkAfterMonadic(index, attr);
             }
         }
         return walk(0, []).attr;
+    }
+
+    function execInternal(internal, env) {
+        var result,
+            toApply,
+            toEval,
+            i;
+
+        if(!isObject(internal) || isArray(internal)) {
+            return internal;
+        } else if(internal.apply !== undef) {
+            toApply = [];
+            for(i = internal.apply.length - 1; i >= 1; i--) {
+                toApply[i - 1] = execInternal(internal.apply[i], env);
+            }
+            return internal.apply[0].apply(null, toApply);
+        } else if(internal.variable !== undef) {
+            if(env[internal.variable] === undef) {
+                throw new Error("VALUE ERROR");
+            }
+            return env[internal.variable];
+        } else if(internal.createArray !== undef) {
+            if(isArray(internal.createArray)) {
+                result = [];
+                for(i = 0; i < internal.createArray.length; i++) {
+                    result[i] = execInternal(internal.createArray[i], env);
+                }
+            } else {
+                result = execInternal(internal.createArray, env);
+            }
+            checkProperArray(result, true);
+            return result;
+        } else if(internal.assign !== undef) {
+            env[internal.assign.name] = execInternal(internal.assign.val, env);
+            return env[internal.assign.name];
+        } else if(internal.eval !== undef) {
+            toEval = convertChar(charArrayToString(execInternal(internal.eval, env)));
+            result = parseAPL(toEval, env);
+            return execInternal(result);
+        } else {
+            throw new Error("Internal Error");
+        }
     }
 
     function extractString(array0) {
@@ -3080,7 +3172,10 @@
             walk(array0);
         }
 
-        if(isArray(array0) && array0.length > 0) {
+        if(isArray(array0)) {
+            if(!allowEmpty && array0.length === 0) {
+                throw new Error("DOMAIN ERROR");
+            }
             lengthArray(array0);
             notMixedArray(array0);
         } else if(!(isNumber(array0) || isString(array0))) {
@@ -3101,10 +3196,12 @@
             },
 
             eval: function(program) {
-                var converted;
+                var converted,
+                    internal;
 
                 converted = convertChar(program);
-                return parseAPL(converted, innerEnv);
+                internal = parseAPL(converted, innerEnv);
+                return execInternal(internal, innerEnv);
             }
         };
         return me;
