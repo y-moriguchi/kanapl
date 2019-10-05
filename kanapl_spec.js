@@ -54,6 +54,12 @@ describe("KANAPL", function () {
         expect(result).toEqual(expected);
     }
 
+    function ng(env, program, errormsg) {
+        expect(function() {
+            env.eval(program);
+        }).toThrow(new Error(errormsg));
+    }
+
     function emptyEnv() {
         var env = KANAPL();
 
@@ -63,6 +69,7 @@ describe("KANAPL", function () {
 
     beforeEach(function () {
     });
+
     describe("scalar functions", function () {
         it("addition", function () {
             var env = KANAPL();
@@ -1128,6 +1135,202 @@ describe("KANAPL", function () {
             ok(env, "#asc#E", []);
             ok(env, "#desc#E", []);
             ok(env, "#tostring#''", []);
+        });
+    });
+
+    describe("abnormal case", function() {
+        it("scalar function(monadic)", function() {
+            var env = KANAPL();
+
+            env.eval("E←'765'");
+            ng(env, "-E", "DOMAIN ERROR");
+            ng(env, "#*#E", "DOMAIN ERROR");
+            ng(env, "#/#E", "DOMAIN ERROR");
+            ng(env, "|E", "DOMAIN ERROR");
+            ng(env, "#max#E", "DOMAIN ERROR");
+            ng(env, "#min#E", "DOMAIN ERROR");
+            ng(env, "#**#E", "DOMAIN ERROR");
+            ng(env, "#log#E", "DOMAIN ERROR");
+            ng(env, "#tri#E", "DOMAIN ERROR");
+            ng(env, "?E", "DOMAIN ERROR");
+            ng(env, "!E", "DOMAIN ERROR");
+        });
+
+        it("scalar function(dyadic)", function() {
+            var env = KANAPL();
+
+            env.eval("E←1 2 3");
+            env.eval("F←1 2");
+            ng(env, "F+E", "LENGTH ERROR");
+            ng(env, "F-E", "LENGTH ERROR");
+            ng(env, "F#*#E", "LENGTH ERROR");
+            ng(env, "F#/#E", "LENGTH ERROR");
+            ng(env, "F|E", "LENGTH ERROR");
+            ng(env, "F#max#E", "LENGTH ERROR");
+            ng(env, "F#min#E", "LENGTH ERROR");
+            ng(env, "F#**#E", "LENGTH ERROR");
+            ng(env, "F#log#E", "LENGTH ERROR");
+            ng(env, "F#tri#E", "LENGTH ERROR");
+            ng(env, "F!E", "LENGTH ERROR");
+            ng(env, "F<E", "LENGTH ERROR");
+            ng(env, "F>E", "LENGTH ERROR");
+            ng(env, "F#<=#E", "LENGTH ERROR");
+            ng(env, "F#>=#E", "LENGTH ERROR");
+            ng(env, "F=E", "LENGTH ERROR");
+            ng(env, "F#!=#E", "LENGTH ERROR");
+            ng(env, "F#and#E", "LENGTH ERROR");
+            ng(env, "F#or#E", "LENGTH ERROR");
+            ng(env, "F#nand#E", "LENGTH ERROR");
+            ng(env, "F#nor#E", "LENGTH ERROR");
+
+            env.eval("E←2 2ρ1 2 3 4");
+            env.eval("F←1 2");
+            ng(env, "F+E", "RANK ERROR");
+            ng(env, "F-E", "RANK ERROR");
+            ng(env, "F#*#E", "RANK ERROR");
+            ng(env, "F#/#E", "RANK ERROR");
+            ng(env, "F|E", "RANK ERROR");
+            ng(env, "F#max#E", "RANK ERROR");
+            ng(env, "F#min#E", "RANK ERROR");
+            ng(env, "F#**#E", "RANK ERROR");
+            ng(env, "F#log#E", "RANK ERROR");
+            ng(env, "F#tri#E", "RANK ERROR");
+            ng(env, "F!E", "RANK ERROR");
+            ng(env, "F<E", "RANK ERROR");
+            ng(env, "F>E", "RANK ERROR");
+            ng(env, "F#<=#E", "RANK ERROR");
+            ng(env, "F#>=#E", "RANK ERROR");
+            ng(env, "F=E", "RANK ERROR");
+            ng(env, "F#!=#E", "RANK ERROR");
+            ng(env, "F#and#E", "RANK ERROR");
+            ng(env, "F#or#E", "RANK ERROR");
+            ng(env, "F#nand#E", "RANK ERROR");
+            ng(env, "F#nor#E", "RANK ERROR");
+
+            env.eval("E←'765'");
+            env.eval("F←1 2 3");
+            ng(env, "F+E", "DOMAIN ERROR");
+            ng(env, "F-E", "DOMAIN ERROR");
+            ng(env, "F#*#E", "DOMAIN ERROR");
+            ng(env, "F#/#E", "DOMAIN ERROR");
+            ng(env, "F|E", "DOMAIN ERROR");
+            ng(env, "F#max#E", "DOMAIN ERROR");
+            ng(env, "F#min#E", "DOMAIN ERROR");
+            ng(env, "F#**#E", "DOMAIN ERROR");
+            ng(env, "F#log#E", "DOMAIN ERROR");
+            ng(env, "F#tri#E", "DOMAIN ERROR");
+            ng(env, "F!E", "DOMAIN ERROR");
+            ng(env, "F<E", "DOMAIN ERROR");
+            ng(env, "F>E", "DOMAIN ERROR");
+            ng(env, "F#<=#E", "DOMAIN ERROR");
+            ng(env, "F#>=#E", "DOMAIN ERROR");
+
+            ng(env, "2.5#tri#1", "DOMAIN ERROR");
+            ng(env, "'A'#tri#1", "DOMAIN ERROR");
+        });
+
+        it("compound operator", function() {
+            var env = KANAPL();
+
+            ng(env, "+/[3]2 2#rho#1", "AXIS ERROR");
+            ng(env, "+/[1.5]2 2#rho#1", "AXIS ERROR");
+            ng(env, "+/[0]2 2#rho#1", "AXIS ERROR");
+            ng(env, "+\\[3]2 2#rho#1", "AXIS ERROR");
+            ng(env, "+\\[1.5]2 2#rho#1", "AXIS ERROR");
+            ng(env, "+\\[0]2 2#rho#1", "AXIS ERROR");
+            ng(env, "(2 3#rho#1)+.-2 2#rho#1", "LENGTH ERROR");
+        });
+
+        it("mixed operator", function() {
+            var env = KANAPL();
+
+            ng(env, "(2 3ρ1)ρ1 2", "RANK ERROR");
+            ng(env, "1 2,[￣2]1 2", "AXIS ERROR");
+            ng(env, "'A',2 3#rho#1", "DOMAIN ERROR");
+            ng(env, "1,2 3#rho#'A'", "DOMAIN ERROR");
+            ng(env, "(2 3#rho#1),2 3#rho#'A'", "DOMAIN ERROR");
+            ng(env, "(2 3#rho#1),3 3#rho#1", "LENGTH ERROR");
+            ng(env, "(3 2#rho#1),[1]3 3#rho#1", "LENGTH ERROR");
+            ng(env, "(3 3#rho#1),[1.5]3 3", "LENGTH ERROR");
+            ng(env, "(3 3 3#rho#1)[2;]", "RANK ERROR");
+            ng(env, "(3 3 3#rho#1)[2;2;2;2]", "RANK ERROR");
+            ng(env, "(3 3 3#rho#1)[2;2;4]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[4;2;2]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[0;2;2]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[1.5;2;2]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[2 2;2 2;2 4]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[2 4;2 2;2 2]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[2 0;2 2;2 2]", "INDEX ERROR");
+            ng(env, "(3 3 3#rho#1)[2 1.5;2 2;2 2]", "INDEX ERROR");
+            ng(env, "(2 2#rho#1)#take#1 1 1", "RANK ERROR");
+            ng(env, "(1 1 1)#take#2 2#rho#1", "LENGTH ERROR");
+            ng(env, "'A'#take#1 1 1", "DOMAIN ERROR");
+            ng(env, "(2 2#rho#1)#drop#1 1 1", "RANK ERROR");
+            ng(env, "(1 1 1)#drop#2 2#rho#1", "LENGTH ERROR");
+            ng(env, "'A'#drop#1 1 1", "DOMAIN ERROR");
+            ng(env, "(1 0 1)/[0]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1)/[4]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1)/[1.5]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "3/[0]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "3/[4]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "3/[1.5]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1)/3 3 2#rho#1", "LENGTH ERROR");
+            ng(env, "(1 0 1)/[1]2 3 3#rho#1", "LENGTH ERROR");
+            ng(env, "(1 0 1 1)\\[0]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1 1)\\[4]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1 1)\\[1.5]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(1 0 1 1)\\3 3 2#rho#1", "LENGTH ERROR");
+            ng(env, "(1 0 1 1)\\[1]2 3 3#rho#1", "LENGTH ERROR");
+            ng(env, "(1 0 1)\\'ABC'", "LENGTH ERROR");
+            ng(env, "#rotate#[0]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "#rotate#[4]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "#rotate#[1.5]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "2#rotate#[0]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "2#rotate#[4]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "2#rotate#[1.5]3 3 3#rho#1", "AXIS ERROR");
+            ng(env, "(3 2#rho#2)#rotate#3 3 3#rho#1 2 3", "LENGTH ERROR");
+            ng(env, "(2 2#rho#2)#rotate#2 2#rho#1 2", "RANK ERROR");
+            ng(env, "'A'#rotate#3 3 3#rho#1", "DOMAIN ERROR");
+            ng(env, "'ABC'#rotate#3 3#rho#1", "DOMAIN ERROR");
+            ng(env, "(2 2#rho#1)#transpose#1 2 3", "RANK ERROR");
+            ng(env, "(1 2)#transpose#1 2 3", "LENGTH ERROR");
+            ng(env, "(2 2)#transpose#2 3#rho#1 2 3", "DOMAIN ERROR");
+            ng(env, "(0 1)#transpose#2 3#rho#1 2 3", "DOMAIN ERROR");
+            ng(env, "'AA'#transpose#2 3#rho#1 2 3", "DOMAIN ERROR");
+            ng(env, "#iota#'A'", "DOMAIN ERROR");
+            ng(env, "(2 2#rho#1)#iota#1 2 3", "RANK ERROR");
+            ng(env, "#asc#2 2#rho#1", "RANK ERROR");
+            ng(env, "#desc#2 2#rho#1", "RANK ERROR");
+            ng(env, "'A'?2", "DOMAIN ERROR");
+            ng(env, "2?'A'", "DOMAIN ERROR");
+            ng(env, "2.5?2", "DOMAIN ERROR");
+            ng(env, "2?2.5", "DOMAIN ERROR");
+            ng(env, "1 2?2", "DOMAIN ERROR");
+            ng(env, "2?1 2", "DOMAIN ERROR");
+            ng(env, "￣1?2", "DOMAIN ERROR");
+            ng(env, "2?1", "DOMAIN ERROR");
+            ng(env, "#domino#1 2 3", "RANK ERROR");
+            ng(env, "#domino#2 2 2#rho#1 2 3", "RANK ERROR");
+            ng(env, "#domino#2 2#rho#0 0 0 1", "DOMAIN ERROR");
+            ng(env, "1 2 3#domino#1 2 3", "RANK ERROR");
+            ng(env, "1 2#domino#2 2 2#rho#1 2 3", "RANK ERROR");
+            ng(env, "1 2#domino#2 2#rho#0 0 0 1", "DOMAIN ERROR");
+            ng(env, "2 2 2#encode#2 2", "LENGTH ERROR");
+            ng(env, "2 2 2#encode#'AAA'", "DOMAIN ERROR");
+            ng(env, "2 2 2#decode#'AAA'", "DOMAIN ERROR");
+            ng(env, "#eval#1", "DOMAIN ERROR");
+            ng(env, "#eval#2 2#rho#'AB'", "RANK ERROR");
+            ng(env, "'AB'#tostring#1", "DOMAIN ERROR");
+            ng(env, "(2 2#rho#1 2)#tostring#1", "RANK ERROR");
+        });
+
+        it("constructing array", function() {
+            var env = KANAPL();
+
+            env.eval("A←1 2 3");
+            ng(env, "1 A 2", "LENGTH ERROR");
+            env.eval("A←'A'");
+            ng(env, "1 A 2", "DOMAIN ERROR");
         });
     });
 });

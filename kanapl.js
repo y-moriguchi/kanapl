@@ -34,22 +34,24 @@
 
     var monadic = {
         "-": function(array) {
-            return map(array, function(x) { return -x; });
+            return map(array, function(x) { return -x; }, isNumber);
         },
 
         "×": function(array) {
             return map(array, function(x) {
                 return x > 0 ? 1 : x < 0 ? -1 : 0;
-            });
+            }, isNumber);
         },
 
         "÷": function(array) {
-            return map(array, function(x) { return 1 / x; });
+            return map(array, function(x) { return 1 / x; }, isNumber);
         },
 
         "ι": function(object1) {
             if(isNumber(object1)) {
                 return iota(object1, 1, 1);
+            } else if(isString(object1)) {
+                throw new Error("DOMAIN ERROR");
             } else {
                 throw new Error("NOT SUPPORTED");
             }
@@ -64,7 +66,7 @@
         },
 
         "*": function(array) {
-            return map(array, function(x) { return Math.exp(x); });
+            return map(array, function(x) { return Math.exp(x); }, isNumber);
         },
 
         "★": function(array) {
@@ -77,23 +79,23 @@
                     throw new Error("DOMAIN ERROR");
                 }
                 return Math.log(x);
-            });
+            }, isNumber);
         },
 
         "|": function(array) {
-            return map(array, function(x) { return Math.abs(x); });
+            return map(array, function(x) { return Math.abs(x); }, isNumber);
         },
 
         "「": function(array) {
-            return map(array, function(x) { return Math.ceil(x); });
+            return map(array, function(x) { return Math.ceil(x); }, isNumber);
         },
 
         "」": function(array) {
-            return map(array, function(x) { return Math.floor(x); });
+            return map(array, function(x) { return Math.floor(x); }, isNumber);
         },
 
         "〇": function(array) {
-            return map(array, function(x) { return Math.PI * x; });
+            return map(array, function(x) { return Math.PI * x; }, isNumber);
         },
 
         "~": function(array) {
@@ -118,7 +120,7 @@
         },
 
         "!": function(array) {
-            return map(array, function(x) { return gamma(x + 1); });
+            return map(array, function(x) { return gamma(x + 1); }, isNumber);
         },
 
         "♯": function(vector) {
@@ -141,25 +143,23 @@
 
     var dyadic = {
         "+": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x + y; });
+            return map2Scalar(object1, object2, function(x, y) { return x + y; }, isNumber);
         },
 
         "-": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x - y; });
+            return map2Scalar(object1, object2, function(x, y) { return x - y; }, isNumber);
         },
 
         "×": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x * y; });
+            return map2Scalar(object1, object2, function(x, y) { return x * y; }, isNumber);
         },
 
         "÷": function(object1, object2) {
-            return map2Scalar(object1, object2, function(x, y) { return x / y; });
+            return map2Scalar(object1, object2, function(x, y) { return x / y; }, isNumber);
         },
 
         "ι": function(vector1, object2) {
-            if(!isArray(vector1)) {
-                throw new Error("LENGTH ERROR");
-            }
+            checkVectorByFunction(vector1, function(x) { return true; });
             return map(object2, function(x) {
                 var result = vector1.indexOf(x);
 
@@ -234,7 +234,7 @@
                     throw new Error("DOMAIN ERROR");
                 }
             }
-            return map2Scalar(object1, object2, function(x, y) { return pow(x, y); });
+            return map2Scalar(object1, object2, function(x, y) { return pow(x, y); }, isNumber);
         },
 
         "★": function(object1, object2) {
@@ -248,7 +248,7 @@
                 }
                 return Math.log(y) / Math.log(x);
             }
-            return map2Scalar(object1, object2, function(x, y) { return log(x, y); });
+            return map2Scalar(object1, object2, function(x, y) { return log(x, y); }, isNumber);
         },
 
         "|": function(object1, object2) {
@@ -264,22 +264,22 @@
                 } else {
                     return y % x;
                 }
-            });
+            }, isNumber);
         },
 
         "「": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) {
                 return x > y ? x : y;
-            });
+            }, isNumber);
         },
 
         "」": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) {
                 return x < y ? x : y;
-            });
+            }, isNumber);
         },
 
-        "〇": function(anInt, array2) {
+        "〇": function(object1, object2) {
             var fn;
 
             function fn0(x) {
@@ -317,28 +317,33 @@
                 return Math.acosh(x);
             }
 
-            function getFn(anInt) {
-                switch(anInt) {
-                    case 0:   return fn0;
-                    case 1:   return Math.sin;
-                    case 2:   return Math.cos;
-                    case 3:   return Math.tan;
-                    case 4:   return function(x) { return Math.sqrt(1 + x * x); };
-                    case 5:   return sinh;
-                    case 6:   return cosh;
-                    case 7:   return tanh;
-                    case -1:  return fnM1;
-                    case -2:  return fnM2;
-                    case -3:  return Math.atan;
-                    case -4:  return fnM4;
-                    case -5:  return Math.asinh ? Math.asinh : K;
-                    case -6:  return Math.acosh ? fnM6 : K;
-                    case -7:  return Math.atanh ? Math.atanh : K;
-                    default:  return K;
+            return map2Scalar(object1, object2, function(x, y) {
+                function getFn(anInt) {
+                    if(!isInteger(anInt)) {
+                        throw new Error("DOMAIN ERROR");
+                    }
+                    switch(anInt) {
+                        case 0:   return fn0;
+                        case 1:   return Math.sin;
+                        case 2:   return Math.cos;
+                        case 3:   return Math.tan;
+                        case 4:   return function(x) { return Math.sqrt(1 + x * x); };
+                        case 5:   return sinh;
+                        case 6:   return cosh;
+                        case 7:   return tanh;
+                        case -1:  return fnM1;
+                        case -2:  return fnM2;
+                        case -3:  return Math.atan;
+                        case -4:  return fnM4;
+                        case -5:  return Math.asinh ? Math.asinh : K;
+                        case -6:  return Math.acosh ? fnM6 : K;
+                        case -7:  return Math.atanh ? Math.atanh : K;
+                        default:  return K;
+                    }
                 }
-            }
-            fn = getFn(anInt);
-            return map(array2, fn);
+                fn = getFn(x);
+                return fn(y);
+            }, isNumber);
         },
 
         "=": function(object1, object2) {
@@ -350,19 +355,19 @@
         },
 
         "<": function(object1, object2) {
-            return map2Scalar(object1, object2, relCheck(function(x, y) { return x < y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x < y }), isNumber);
         },
 
         "≦": function(object1, object2) {
-            return map2Scalar(object1, object2, relCheck(function(x, y) { return x <= y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x <= y }), isNumber);
         },
 
         ">": function(object1, object2) {
-            return map2Scalar(object1, object2, relCheck(function(x, y) { return x > y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x > y }), isNumber);
         },
 
         "≧": function(object1, object2) {
-            return map2Scalar(object1, object2, relCheck(function(x, y) { return x >= y }));
+            return map2Scalar(object1, object2, relCheck(function(x, y) { return x >= y }), isNumber);
         },
 
         "^": function(object1, object2) {
@@ -416,7 +421,7 @@
         "!": function(object1, object2) {
             return map2Scalar(object1, object2, function(x, y) {
                 return gamma(y + 1) / gamma(x + 1) / gamma(y - x + 1);
-            });
+            }, isNumber);
         },
 
         "↑": function(object1, object2) {
@@ -499,6 +504,9 @@
                         }
                     } else {
                         fold1 = [];
+                        if(rhoArray1[0] !== rhoArray2a) {
+                            throw new Error("LENGTH ERROR");
+                        }
                         for(i = 0; i < rhoArray2a; i++) {
                             fold1[i] = fn2(getIndex(array1, indicesArray1.concat([i])), getIndex(array2, [i].concat(indicesArray2)));
                         }
@@ -691,7 +699,9 @@
             throw new Error("DOMAIN ERROR");
         }
         for(i = 0; i < anObject.length; i++) {
-            if(!isString(anObject[i]) || anObject[i].length !== 1) {
+            if(isArray(anObject[i])) {
+                throw new Error("RANK ERROR");
+            } else if(!isString(anObject[i]) || anObject[i].length !== 1) {
                 throw new Error("DOMAIN ERROR");
             }
             result += anObject[i];
@@ -1197,7 +1207,7 @@
         }
         for(i = 0; i < vector0.length; i++) {
             if(isArray(vector0[i])) {
-                throw new Error("DOMAIN ERROR");
+                throw new Error("RANK ERROR");
             } else if(!fn(vector0[i])) {
                 throw new Error("DOMAIN ERROR");
             }
@@ -1254,7 +1264,9 @@
                 max = 0;
 
             for(i = 0; i < vector.length; i++) {
-                if(!isInteger(vector[i])) {
+                if(isArray(vector[i])) {
+                    throw new Error("RANK ERROR");
+                } else if(!isInteger(vector[i])) {
                     throw new Error("DOMAIN ERROR");
                 }
                 max = max < vector[i] ? vector[i] : max;
@@ -1295,12 +1307,12 @@
             }
         }
 
+        max = checkVector(vec);
         if(vec.length !== rankVector.length) {
             throw new Error("LENGTH ERROR");
         } else if(rankVector.length === 0) {
             return array1;
         }
-        max = checkVector(vec);
         subst([]);
         return result;
     }
@@ -1343,6 +1355,9 @@
                 return 0;
             } else {
                 destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                    throw new Error("AXIS ERROR");
+                }
                 return foldop(array1, 1);
             }
         };
@@ -1387,6 +1402,9 @@
                 return [];
             } else {
                 destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                    throw new Error("AXIS ERROR");
+                }
                 return foldop(array1, 1);
             }
         };
@@ -1474,6 +1492,9 @@
             } else {
                 rhoVector = rho(array1);
                 destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                    throw new Error("AXIS ERROR");
+                }
                 return replicate(array1, vector, 1);
             }
         } else {
@@ -1485,6 +1506,9 @@
             } else {
                 rhoVector = rho(array1);
                 destAxis = axis === null ? rho(rhoVector)[0] : axis;
+                if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                    throw new Error("AXIS ERROR");
+                }
                 return comp(array1, 1);
             }
         }
@@ -1565,6 +1589,9 @@
             rhoVector = rho(array1);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
+            if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                throw new Error("AXIS ERROR");
+            }
             return expand(array1, 1);
         }
     }
@@ -1638,6 +1665,18 @@
             }
         }
 
+        function checkLength(rhoVector1, rhoVector2, level) {
+            if(rhoVector1.length === 0) {
+                return;
+            } else if(level === destAxis) {
+                checkLength(rhoVector1, rhoVector2.slice(1), level + 1);
+            } else if(rhoVector1[0] === rhoVector2[0]) {
+                checkLength(rhoVector1.slice(1), rhoVector2.slice(1), level + 1);
+            } else {
+                throw new Error("LENGTH ERROR");
+            }
+        }
+
         if(axis !== null && !isInteger(axis)) {
             throw new Error("AXIS ERROR");
         } else if(!isArray(array1)) {
@@ -1649,6 +1688,9 @@
             rhoVector = rho(arrayFixed2);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
+            if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                throw new Error("AXIS ERROR");
+            }
             rotateScalar([], 1);
             return result;
         } else {
@@ -1658,6 +1700,10 @@
                 throw new Error("RANK ERROR");
             }
             destAxis = axis === null ? rank : axis;
+            if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                throw new Error("AXIS ERROR");
+            }
+            checkLength(rho(array1), rhoVector, 1);
             rotate([], 1);
             return result;
         }
@@ -1695,6 +1741,9 @@
             rhoVector = rho(array1);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
+            if(!isInteger(destAxis) || destAxis < 1 || destAxis > rhoVector.length) {
+                throw new Error("AXIS ERROR");
+            }
             return rev(array1, 1);
         }
     }
@@ -1720,7 +1769,8 @@
     function concatenateArray(array1, array2, axis) {
         var rhoVector,
             rank,
-            destAxis;
+            destAxis,
+            result;
 
         function copy(array1) {
             var result = [],
@@ -1849,7 +1899,7 @@
             rhoVector = rho(array1);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
-            return concatScalarRight(array1, array2, 1);
+            result = concatScalarRight(array1, array2, 1);
         } else if(!isArray(array1)) {
             if(array2.length === 0) {
                 return array1;
@@ -1857,7 +1907,7 @@
             rhoVector = rho(array2);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
-            return concatScalar(array1, array2, 1);
+            result = concatScalar(array1, array2, 1);
         } else if(array1.length === 0) {
             return array2;
         } else if(array2.length === 0) {
@@ -1866,8 +1916,11 @@
             rhoVector = rho(array2);
             rank = rho(rhoVector)[0];
             destAxis = axis === null ? rank : axis;
-            return isArray(array1) ? concat(array1, array2, 1) : concatScalar(array2, 1);
+            result = isArray(array1) ? concat(array1, array2, 1) : concatScalar(array2, 1);
         }
+
+        checkProperArray(result);
+        return result;
     }
 
     function pickUpArray(array1, pickUpIndices) {
@@ -1876,6 +1929,9 @@
                 i;
 
             if(!isArray(pickupArray)) {
+                if(!isInteger(pickupArray) || pickupArray < 1 || pickupArray > array0.length) {
+                    throw new Error("INDEX ERROR");
+                }
                 return pickUp(array0[pickupArray - 1], indices);
             } else {
                 result = [];
@@ -1915,6 +1971,9 @@
         } else if(array1.length === 0) {
             throw new Error("INDEX ERROR");
         } else {
+            if(rho(array1).length !== pickUpIndices.length) {
+                throw new Error("RANK ERROR");
+            }
             return pickUp(array1, pickUpIndices);
         }
     }
@@ -2030,6 +2089,9 @@
             return array1;
         } else {
             rhoVector = rho(arrayFixed1);
+            if(vectorFixed1.length !== rhoVector.length) {
+                throw new Error("LENGTH ERROR");
+            }
             return take(arrayFixed1, 1);
         }
     }
@@ -2077,6 +2139,9 @@
         } else if(vectorFixed1.length === 0) {
             return array1;
         } else {
+            if(vectorFixed1.length !== rho(arrayFixed1).length) {
+                throw new Error("LENGTH ERROR");
+            }
             return drop(arrayFixed1, 1);
         }
     }
@@ -2262,6 +2327,9 @@
                         inner1(indicesArray0, indicesArray2.concat([i]));
                     }
                 } else {
+                    if(rhoArray0[0] !== arrayFixed2.length) {
+                        throw new Error("LENGTH ERROR");
+                    }
                     enc = getIndex(arrayFixed2, indicesArray2);
                     for(i = rhoArray0[0] - 1; i >= 0; i--) {
                         base = getIndex(array0, [i].concat(indicesArray0));
@@ -2425,7 +2493,9 @@
         } else if(!isArray(format)) {
             return toStringFix(array1, -1, format);
         } else {
-            if(!isNumber(format[0]) || !isNumber(format[1])) {
+            if(isArray(format[0]) || isArray(format[1])) {
+                throw new Error("RANK ERROR");
+            } else if(!isNumber(format[0]) || !isNumber(format[1])) {
                 throw new Error("DOMAIN ERROR");
             }
             return toStringFix(array1, format[0], format[1]);
@@ -2456,29 +2526,31 @@
         return result;
     }
 
-    function map(anObject, action) {
+    function map(anObject, action, validate) {
         var result = [],
             i;
 
         if(!isArray(anObject)) {
+            if(validate && !validate(anObject)) {
+                throw new Error("DOMAIN ERROR");
+            }
             return action(anObject);
         }
 
         for(i = 0; i < anObject.length; i++) {
-            if(isArray(anObject[i])) {
-                result[i] = map(anObject[i], action);
-            } else {
-                result[i] = action(anObject[i]);
-            }
+            result[i] = map(anObject[i], action, validate);
         }
         return result;
     }
 
-    function map2(array1, array2, action) {
+    function map2(array1, array2, action, validate) {
         var result = [],
             i;
 
         if(!isArray(array1) && !isArray(array2)) {
+            if(validate && (!validate(array1) || !validate(array2))) {
+                throw new Error("DOMAIN ERROR");
+            }
             return action(array1, array2);
         } else if(!(isArray(array1) && isArray(array2))) {
             throw new Error("RANK ERROR");
@@ -2487,16 +2559,12 @@
         } 
 
         for(i = 0; i < array1.length; i++) {
-            if(isArray(array1[i])) {
-                result[i] = map2(array1[i], array2[i], action);
-            } else {
-                result[i] = action(array1[i], array2[i]);
-            }
+            result[i] = map2(array1[i], array2[i], action, validate);
         }
         return result;
     }
 
-    function map2Scalar(object1, object2, action) {
+    function map2Scalar(object1, object2, action, validate) {
         if(isArray(object1) && !isArray(object2)) {
             return map(object1, function(x) {
                 return action(x, object2);
@@ -2505,8 +2573,13 @@
             return map(object2, function(x) {
                 return action(object1, x);
             });
+        } else if(!isArray(object1) && !isArray(object2)) {
+            return action(object1, object2);
         } else {
-            return map2(object1, object2, action);
+            if(rho(rho(object1))[0] !== rho(rho(object2))[0]) {
+                throw new Error("RANK ERROR");
+            }
+            return map2(object1, object2, action, validate);
         }
     }
 
@@ -2825,6 +2898,7 @@
 
         function walkAfterMonadic(index, attr) {
             var result,
+                resultConcat,
                 ch;
 
             ch = program.charAt(index);
@@ -2837,12 +2911,12 @@
                 return result;
             } else if(!!(result = walkVariablePickUp(index, attr))) {
                 return result;
-            } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr))) {
-                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
-            } else if(!!(result = parseRegex(STRING, getString, index, attr))) {
-                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
-            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
-                return walkAfterMonadic(result.lastIndex, attr.concat([result.attr]));
+            } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr)) ||
+                    !!(result = parseRegex(STRING, getString, index, attr)) ||
+                    !!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
+                resultConcat = attr.concat([result.attr]);
+                checkProperArray(resultConcat, true);
+                return walkAfterMonadic(result.lastIndex, resultConcat);
             } else {
                 if(attr.length === 0) {
                     throw new Error("SYNTAX ERROR");
@@ -2965,7 +3039,7 @@
         return extract(array0);
     }
 
-    function checkProperArray(array0) {
+    function checkProperArray(array0, allowEmpty) {
         function lengthArray(array0) {
             var length = -1,
                 i;
@@ -2973,24 +3047,44 @@
             if(!isArray(array0)) {
                 return 0;
             } else {
-                if(array0.length === 0) {
-                    throw new Error("Invalid Array");
+                if(!allowEmpty && array0.length === 0) {
+                    throw new Error("DOMAIN ERROR");
                 }
                 for(i = 0; i < array0.length; i++) {
                     if(length < 0) {
-                        length = lengthArray(array[i]);
-                    } else if(lengthArray(array[i]) !== length) {
-                        throw new Error("Invalid Array");
+                        length = lengthArray(array0[i]);
+                    } else if(lengthArray(array0[i]) !== length) {
+                        throw new Error("LENGTH ERROR");
                     }
                 }
                 return array0.length;
             }
         }
 
+        function notMixedArray(array0) {
+            var type = null;
+
+            function walk(array0) {
+                var i;
+
+                if(isArray(array0)) {
+                    for(i = 0; i < array0.length; i++) {
+                        walk(array0[i]);
+                    }
+                } else if(type === null) {
+                    type = typeof array0;
+                } else if(type !== typeof array0) {
+                    throw new Error("DOMAIN ERROR");
+                }
+            }
+            walk(array0);
+        }
+
         if(isArray(array0) && array0.length > 0) {
             lengthArray(array0);
+            notMixedArray(array0);
         } else if(!(isNumber(array0) || isString(array0))) {
-            throw new Error("Invalid Array");
+            throw new Error("DOMAIN ERROR");
         }
     }
 
