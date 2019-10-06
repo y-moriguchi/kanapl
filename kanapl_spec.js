@@ -54,6 +54,32 @@ describe("KANAPL", function () {
         expect(result).toEqual(expected);
     }
 
+    function stringify(array0) {
+        var result = [],
+            i;
+
+        if(!isArray(array0)) {
+            return array0;
+        } else if(isString(array0[0])) {
+            result = "";
+            for(i = 0; i < array0.length; i++) {
+                result += array0[i];
+            }
+        } else {
+            for(i = 0; i < array0.length; i++) {
+                result[i] = stringify(array0[i]);
+            }
+        }
+        return result;
+    }
+
+    function okString(env, program, expected) {
+        var result = env.eval(program);
+
+        result = stringify(result);
+        expect(result).toEqual(expected);
+    }
+
     function ng(env, program, errormsg) {
         expect(function() {
             env.eval(program);
@@ -738,6 +764,9 @@ describe("KANAPL", function () {
             ok(env, "A[♯A]", [10, 30, 50, 70, 90]);
             ok(env, "♭A", [4, 5, 2, 1, 3]);
             ok(env, "A[♭A]", [90, 70, 50, 30, 10]);
+            env.eval("A←12 9 10 12");
+            ok(env, "♯A", [2, 3, 1, 4]);
+            ok(env, "♭A", [1, 4, 3, 2]);
         });
 
         it("domino", function() {
@@ -1335,10 +1364,55 @@ describe("KANAPL", function () {
     });
 
     describe("program test", function() {
+        it("simple statistics", function() {
+            var env = KANAPL();
+
+            env.eval("X←72 72 73 74 77 80 83 85 91");
+            env.eval("SD←((+/((X - AV←(T←+/X)÷ρX)*2))÷ρX)*0.5");
+            okPrec(env, "T,AV,SD", 8, [707, 78.55555556, 6.30891981]);
+        });
+
         it("prime number", function() {
             var env = KANAPL();
 
             ok(env, "(~R∈R・.×R)/R←1↓ι10", [2, 3, 5, 7]);
+        });
+
+        it("sorting", function() {
+            var env = KANAPL();
+
+            env.eval("X←4 13ρ'Yuki HimekawaHina Araki   Rin Shibuya  Ryo Matsunaga'");
+            okString(env, "X[♯X+.≠' ';]", ["Hina Araki   ", "Rin Shibuya  ", "Yuki Himekawa", "Ryo Matsunaga"]);
+        });
+
+        it("compute polynomial", function() {
+            var env = KANAPL();
+
+            env.eval("A←1");
+            ok(env, "5＋A×4＋A×2＋A×3", 14);
+            ok(env, "A ⊥ 3 2 4 5", 14);
+        });
+
+        it("Taylor series", function() {
+            var env = KANAPL();
+
+            env.eval("A←1");
+            env.eval("K←0 1 2 3 4 5");
+            okPrec(env, "F←+/(A★K)÷!K", 8, 2.71666667);
+        });
+
+        it("trimming string", function() {
+            var env = KANAPL();
+
+            env.eval("A←'WWWABCWDEF'");
+            okString(env, "(∨\\A≠'W')/A", "ABCWDEF");
+        });
+
+        it("graph", function() {
+            var env = KANAPL();
+
+            env.eval("B←4 2 3 1 5");
+            okString(env, "' *'[1+(φι「/B)・.≦B]", ["    *", "*   *", "* * *", "*** *", "*****"]);
         });
     });
 });

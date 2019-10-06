@@ -552,7 +552,7 @@
                         return fold(fold1, fn1);
                     } else {
                         for(i = 0; i < array1.length; i++) {
-                            result[i] = generateLeftScalar(array1[i], scalar);
+                            result[i] = generateRightScalar(array1[i], scalar);
                         }
                         return result;
                     }
@@ -1976,13 +1976,12 @@
         }
 
         if(!isArray(array1)) {
-            throw new Error("RANK ERROR");
+            return pickUp([array1], pickUpIndices);
         } else if(array1.length === 0) {
             throw new Error("INDEX ERROR");
+        } else if(rho(array1).length !== pickUpIndices.length) {
+            throw new Error("RANK ERROR");
         } else {
-            if(rho(array1).length !== pickUpIndices.length) {
-                throw new Error("RANK ERROR");
-            }
             return pickUp(array1, pickUpIndices);
         }
     }
@@ -2183,6 +2182,7 @@
 
     function sortVector(vector1, desc) {
         var sorted,
+            vector0,
             i;
 
         checkVectorByFunction(vector1, function(x) { return true; });
@@ -2190,13 +2190,14 @@
             return [];
         } else {
             sorted = vector1.slice().sort(function(x, y) {
-                return x < y ? -1 : x > y ? 1 : 0;
+                var comp = x < y ? -1 : x > y ? 1 : 0;
+
+                return desc ? -comp : comp;
             });
+            vector0 = vector1.slice();
             for(i = 0; i < sorted.length; i++) {
-                sorted[i] = vector1.indexOf(sorted[i]) + 1;
-            }
-            if(desc) {
-                sorted.reverse();
+                sorted[i] = vector0.indexOf(sorted[i]) + 1;
+                vector0[sorted[i] - 1] = null;
             }
             return sorted;
         }
