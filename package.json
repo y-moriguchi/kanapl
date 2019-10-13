@@ -1,0 +1,28 @@
+{
+  "name": "kanapl",
+  "version": "0.0.0",
+  "description": "an APL Interpreter",
+  "main": "kanapl.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "README.md",
+    "kanapl.js",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/y-moriguchi/kanapl.git"
+  },
+  "keywords": [
+    "APL",
+    "interpreter"
+  ],
+  "author": "Yuichiro MORIGUCHI",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/y-moriguchi/kanapl/issues"
+  },
+  "homepage": "https://github.com/y-moriguchi/kanapl#readme"
+}
