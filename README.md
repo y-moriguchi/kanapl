@@ -1,4 +1,4 @@
-# Morilib APL (KANAPL)
+# Morilib APL
 
 Morilib APL is an APL interpreter written by JavaScript.
 

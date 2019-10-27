@@ -1,5 +1,5 @@
 /*
- * KANAPL
+ * Morilib APL
  *
  * Copyright (c) 2019 Yuichiro MORIGUCHI
  *

@@ -1,5 +1,5 @@
 {
-  "name": "kanapl",
+  "name": "morilib-apl",
   "version": "0.0.0",
   "description": "an APL Interpreter",
   "main": "kanapl.js",
