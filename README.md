@@ -1,6 +1,6 @@
-# KANAPL
+# Morilib APL (KANAPL)
 
-KANAPL is an APL interpreter written by JavaScript.
+Morilib APL is an APL interpreter written by JavaScript.
 
 ## How to use
 
@@ -49,10 +49,10 @@ The characters shown as follows are vaild for variable name.
 
 ## APL characters
 
-KANAPL can use below APL features.  
-KANAPL also can use ASCII sequence surrounded by #.
+Morilib APL can use below APL features.  
+Morilib APL also can use ASCII sequence surrounded by #.
 
-|Feature|APL|KANAPL|Sequence|
+|Feature|APL|Morilib APL|Sequence|
 |:--|:--|:--|:--|
 |Negative sign|￣|￣|#~#|
 |Addition|+|+||
