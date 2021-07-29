@@ -2035,7 +2035,7 @@
             return array1;
         } else {
             assign([], lval, rval);
-            return array1;
+            return rval;
         }
     }
 
@@ -2946,7 +2946,7 @@
             } else if(!!(result = walkPickUp(index, attr))) {
                 return result;
             } else if(!!(result = walkVariablePickUp(index, attr))) {
-                return result;
+                return walkFunction(result.lastIndex, result.attr);
             } else if(!!(result = parseRegex(NUMBER, parseAPLFloat, index, attr)) ||
                     !!(result = parseRegex(STRING, getString, index, attr))) {
                 resultConcat = attr.concat([result.attr]);
