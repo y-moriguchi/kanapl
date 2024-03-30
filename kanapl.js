@@ -57,8 +57,16 @@
             }
         },
 
+        "\u2373": function(object1) {
+            return monadic["ι"](object1);
+        },
+
         "ρ": function(object1) {
             return scalarize(rho(object1));
+        },
+
+        "\u2374": function(object1) {
+            return monadic["ι"](object1);
         },
 
         "〆": function(object1) {
@@ -167,6 +175,10 @@
             });
         },
 
+        "\u2373": function(object1, object2) {
+            return dyadic["ι"](object1, object2);
+        },
+
         "ρ": function(vector1, vector2) {
             var vec1 = isArray(vector1) ? vector1 : [vector1],
                 vec2 = isArray(vector2) ? toVector(vector2) : [vector2];
@@ -205,6 +217,10 @@
             } else {
                 return gendim(0, 0).value;
             }
+        },
+
+        "\u2374": function(object1, object2) {
+            return dyadic["ρ"](object1, object2);
         },
 
         "*": function(object1, object2) {
@@ -1339,9 +1355,9 @@
                     if(!isArray(array0)) {
                         return array0;
                     } else if(level === destAxis) {
-                        for(i = 0; i < array0.length; i++) {
-                            if(i > 0) {
-                                result = operator(result, foldop(array0[i], level + 1));
+                        for(i = array0.length - 1; i >= 0; i--) {
+                            if(i < array0.length - 1) {
+                                result = operator(foldop(array0[i], level + 1), result);
                             } else {
                                 result = foldop(array0[i], level + 1);
                             }
@@ -1382,17 +1398,21 @@
 
                 function foldop(array0, level) {
                     var i,
+                        j,
                         result;
 
                     if(!isArray(array0)) {
                         return array0;
                     } else if(level === destAxis) {
                         result = [];
+
                         for(i = 0; i < array0.length; i++) {
-                            if(i > 0) {
-                                result[i] = operator(result[i - 1], foldop(array0[i], level + 1));
-                            } else {
-                                result[i] = foldop(array0[i], level + 1);
+                            for(j = i; j >= 0; j--) {
+                                if(j < i) {
+                                    result[i] = operator(foldop(array0[j], level + 1), result[i]);
+                                } else {
+                                    result[i] = foldop(array0[j], level + 1);
+                                }
                             }
                         }
                     } else {
@@ -2652,6 +2672,7 @@
         }
 
         result = result.replace(/　/g, " ");
+        result = result.replace(/\u235D.*$/, "");
         result = result.trim();
         result = mapHomomorphism(MAP_APL_CHAR, result);
         result = mapHomomorphism(MAP_FULLWIDTH, result);
@@ -3184,6 +3205,69 @@
         }
     }
 
+    function execAPL(program, innerEnv) {
+        var converted,
+            internal;
+
+        converted = convertChar(program);
+        if(converted === "") {
+            return null;
+        }
+        internal = parseAPL(converted, innerEnv);
+        return execInternal(internal, innerEnv);
+    }
+
+    function flowAPL(programs, innerEnv) {
+        var pc = 1,
+            LABEL = /^([\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*):/g,
+            result = null,
+            progs = [],
+            matchLabel,
+            i;
+
+        for(i = 0; i < programs.length; i++) {
+            matchLabel = LABEL.exec(programs[i]);
+
+            if(matchLabel !== null) {
+                innerEnv[matchLabel[1]] = i + 1;
+                progs.push(programs[i].replace(LABEL, ""));
+            } else {
+                progs.push(programs[i]);
+            }
+        }
+
+        while(pc > 0 && pc <= progs.length) {
+            var program = progs[pc - 1];
+
+            if(program === "") {
+                pc++;
+            } else if(program[0] === "→") {
+                var lineno;
+
+                lineno = execAPL(program.slice(1));
+                if(Number.isSafeInteger(lineno)) {
+                    pc = lineno;
+                } else if(Array.isArray(lineno) && lineno >= 0) {
+                    if(lineno.length === 0) {
+                        pc++;
+                    } else if(Number.isSafeInteger(lineno[0]) && lineno[0] >= 0) {
+                        pc = lineno[0];
+                    } else {
+                        throw new Error("RANK ERROR");
+                    }
+                } else {
+                    throw new Error("DOMAIN ERROR");
+                }
+            } else {
+                var r2 = execAPL(program, innerEnv);
+
+                result = r2 !== null ? r2 : result;
+                pc++;
+            }
+        }
+        return result;
+    }
+
     function createEnv(env) {
         var innerEnv = env ? deepcopy(env) : {},
             me;
@@ -3197,12 +3281,7 @@
             },
 
             eval: function(program) {
-                var converted,
-                    internal;
-
-                converted = convertChar(program);
-                internal = parseAPL(converted, innerEnv);
-                return execInternal(internal, innerEnv);
+                return flowAPL(program, innerEnv);
             }
         };
         return me;
