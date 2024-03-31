@@ -3151,21 +3151,28 @@
             result,
             i;
 
-        for(i = 0; i < envKeys; i++) {
-            oldEnv[envKeys[i]] = env[envKeys[i]];
+        for(i = 0; i < funcInfo.locals.length; i++) {
+            oldEnv[funcInfo.locals[i]] = env[funcInfo.locals[i]];
         }
 
         if(func.arg2) {
+            oldEnv[funcInfo.arg2] = env[funcInfo.arg2];
             env[funcInfo.arg2] = execInternal(func.arg2, env);
         }
         if(func.arg1) {
+            oldEnv[funcInfo.arg1] = env[funcInfo.arg1];
             env[funcInfo.arg1] = execInternal(func.arg1, env);
         }
         result = flowAPL(funcInfo.body, env);
 
-        env = {};
-        for(i = 0; i < envKeys; i++) {
-            env[envKeys[i]] = oldEnv[envKeys[i]];
+        if(func.arg2) {
+            env[funcInfo.arg2] = oldEnv[funcInfo.arg2];
+        }
+        if(func.arg1) {
+            env[funcInfo.arg1] = oldEnv[funcInfo.arg1];
+        }
+        for(i = 0; i < funcInfo.locals.length; i++) {
+            env[funcInfo.locals[i]] = oldEnv[funcInfo.locals[i]];
         }
         return result;
     }
@@ -3364,11 +3371,21 @@
         var splitted,
             splittedName,
             VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*/,
+            LABEL = /^([\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*):/,
+            matchLabel,
+            labels = [],
             i;
 
         if(programs.length === 0) {
             return null;
         } else if(programs[0].startsWith("∇")) {
+            for(i = 1; i < programs.length; i++) {
+                matchLabel = LABEL.exec(programs[i]);
+
+                if(matchLabel !== null) {
+                    labels.push(matchLabel[1]);
+                }
+            }
             splitted = programs[0].slice(1).split(/[ \t　]*;[ \t　]*/);
             splittedName = splitted[0].split(/[ 　]+/);
             for(i = 1; i < splitted.length; i++) {
@@ -3387,13 +3404,13 @@
                 env["f." + splittedName[1]] = {
                     arg1: splittedName[0],
                     arg2: splittedName[2],
-                    locals: splitted.slice(1),
+                    locals: splitted.slice(1).concat(labels),
                     body: programs.slice(1)
                 };
             } else {
                 env["f." + splittedName[0]] = {
                     arg1: splittedName[1],
-                    locals: splitted.slice(1),
+                    locals: splitted.slice(1).concat(labels),
                     body: programs.slice(1)
                 };
             }
