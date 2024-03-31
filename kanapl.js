@@ -8,6 +8,7 @@
  **/
 (function(root) {
     var undef = void 0;
+    var consoleLog = function(v) { };
 
     /*
      * Reference:
@@ -2972,7 +2973,7 @@
                     !!(result = parseRegex(STRING, getString, index, attr))) {
                 resultConcat = attr.concat([result.attr]);
                 return walkAfterMonadic(result.lastIndex, resultConcat);
-            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr))) {
+            } else if(!!(result = parseRegex(VARIABLE, getVariable, index, attr)) && !env["f." + result.attr]) {
                 resultConcat = attr.concat([{
                     variable: result.attr
                 }]);
@@ -3079,11 +3080,94 @@
                         eval: result.attr
                     }
                 };
+            } else if(!!(funcName = parseRegex(VARIABLE, K, index, attr)) && env["f." + funcName.attr]) {
+                return {
+                    lastIndex: skipBlankIndex(index),
+                    attr: attr
+                };
             } else {
                 return walkAfterMonadic(index, attr);
             }
         }
-        return walk(0, []).attr;
+
+        function walkUserFunction(index, attr) {
+            var funcName,
+                result,
+                result2,
+                funcInfo;
+
+            if(!!(funcName = parseRegex(VARIABLE, K, index, attr)) && env["f." + funcName.attr]) {
+                funcInfo = env["f." + funcName.attr];
+                if(funcInfo.arg1) {
+                    result = walk(skipBlankIndex(funcName.lastIndex), []);
+                    return {
+                        lastIndex: result.lastIndex,
+                        attr: {
+                            func: {
+                                name: funcName.attr,
+                                arg1: result.attr
+                            },
+                            isFunc: true
+                        }
+                    };
+                } else {
+                    return {
+                        lastIndex: skipBlankIndex(funcName.lastIndex),
+                        attr: {
+                            func: {
+                                name: funcName.attr
+                            },
+                            isFunc: true
+                        }
+                    };
+                }
+            } else {
+                result = walk(index, attr);
+                if(!!(funcName = parseRegex(VARIABLE, K, result.lastIndex, attr)) && env["f." + funcName.attr]) {
+                    result2 = walk(skipBlankIndex(funcName.lastIndex), []);
+                    return {
+                        lastIndex: result2.lastIndex,
+                        attr: {
+                            func: {
+                                name: funcName.attr,
+                                arg1: result.attr,
+                                arg2: result2.attr
+                            },
+                            isFunc: true
+                        }
+                    };
+                } else {
+                    return result;
+                }
+            }
+        }
+        return walkUserFunction(0, []).attr;
+    }
+
+    function execFunction(func, env) {
+        var funcInfo = env["f." + func.name],
+            oldEnv = {},
+            envKeys = Object.keys(env),
+            result,
+            i;
+
+        for(i = 0; i < envKeys; i++) {
+            oldEnv[envKeys[i]] = env[envKeys[i]];
+        }
+
+        if(func.arg2) {
+            env[funcInfo.arg2] = execInternal(func.arg2, env);
+        }
+        if(func.arg1) {
+            env[funcInfo.arg1] = execInternal(func.arg1, env);
+        }
+        result = flowAPL(funcInfo.body, env);
+
+        env = {};
+        for(i = 0; i < envKeys; i++) {
+            env[envKeys[i]] = oldEnv[envKeys[i]];
+        }
+        return result;
     }
 
     function execInternal(internal, env) {
@@ -3123,6 +3207,8 @@
             toEval = convertChar(charArrayToString(execInternal(internal.eval, env)));
             result = parseAPL(toEval, env);
             return execInternal(result);
+        } else if(internal.func !== undef) {
+            return execFunction(internal.func, env);
         } else {
             throw new Error("Internal Error");
         }
@@ -3206,15 +3292,21 @@
     }
 
     function execAPL(program, innerEnv) {
-        var converted,
-            internal;
+        var ASSIGN = /^[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*←/g,
+            converted,
+            internal,
+            result;
 
         converted = convertChar(program);
         if(converted === "") {
             return null;
         }
         internal = parseAPL(converted, innerEnv);
-        return execInternal(internal, innerEnv);
+        result = execInternal(internal, innerEnv);
+        if(!internal.isFunc && !ASSIGN.test(converted)) {
+            consoleLog(result);
+        }
+        return result;
     }
 
     function flowAPL(programs, innerEnv) {
@@ -3268,6 +3360,49 @@
         return result;
     }
 
+    function createFunction(programs, env) {
+        var splitted,
+            splittedName,
+            VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*/,
+            i;
+
+        if(programs.length === 0) {
+            return null;
+        } else if(programs[0].startsWith("∇")) {
+            splitted = programs[0].slice(1).split(/[ \t　]*;[ \t　]*/);
+            splittedName = splitted[0].split(/[ 　]+/);
+            for(i = 1; i < splitted.length; i++) {
+                if(!VARIABLE.test(splitted[i])) {
+                    throw new Error("SYNTAX ERROR");
+                }
+            }
+            for(i = 0; i < splittedName.length; i++) {
+                if(!VARIABLE.test(splittedName[i])) {
+                    throw new Error("SYNTAX ERROR");
+                }
+            }
+            if(splittedName.length > 3) {
+                throw new Error("SYNTAX ERROR");
+            } else if(splittedName.length === 3) {
+                env["f." + splittedName[1]] = {
+                    arg1: splittedName[0],
+                    arg2: splittedName[2],
+                    locals: splitted.slice(1),
+                    body: programs.slice(1)
+                };
+            } else {
+                env["f." + splittedName[0]] = {
+                    arg1: splittedName[1],
+                    locals: splitted.slice(1),
+                    body: programs.slice(1)
+                };
+            }
+            return null;
+        } else {
+            return flowAPL(programs, env);
+        }
+    }
+
     function createEnv(env) {
         var innerEnv = env ? deepcopy(env) : {},
             me;
@@ -3280,8 +3415,21 @@
                 env[name] = source;
             },
 
+            setLog: function(log) {
+                consoleLog = log;
+            },
+
             eval: function(program) {
-                return flowAPL(program, innerEnv);
+                var converted,
+                    internal;
+
+                converted = convertChar(program);
+                internal = parseAPL(converted, innerEnv);
+                return execInternal(internal, innerEnv);
+            },
+
+            evalAll: function(program) {
+                return createFunction(program, innerEnv);
             }
         };
         return me;
