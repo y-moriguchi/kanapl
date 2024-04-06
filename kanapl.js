@@ -9,6 +9,7 @@
 (function(root) {
     var undef = void 0;
     var consoleLog = function(v) { };
+    var $ = function(v) { console.log(v); return v; }
 
     /*
      * Reference:
@@ -103,16 +104,16 @@
             return map(array, function(x) { return Math.floor(x); }, isNumber);
         },
 
-        "〇": function(array) {
+        "○": function(array) {
             return map(array, function(x) { return Math.PI * x; }, isNumber);
         },
 
-        "~": function(array) {
+        "\u223c": function(array) {
             return map(array, function(x) { return x === 0 ? 1 : 0; });
         },
 
         "～": function(array) {
-            return monadic["~"](array);
+            return monadic["\u223c"](array);
         },
 
         ",": function(array) {
@@ -2037,13 +2038,18 @@
                 }
             } else if(isArray(lval[0])) {
                 lvalue = getIndex(array1, leftIndices);
-                if(!isArray(lvalue) || !isArray(rval)) {
+                if(!isArray(rval)) {
+                    for(i = 0; i < lval[0].length; i++) {
+                        assign(leftIndices.concat([lval[0][i] - 1]), lval.slice(1), rval);
+                    }
+                } else if(!isArray(lvalue) || !isArray(rval)) {
                     throw new Error("RANK ERROR");
                 } else if(lval[0].length !== rval.length) {
                     throw new Error("LENGTH ERROR");
-                }
-                for(i = 0; i < rval.length; i++) {
-                    assign(leftIndices.concat([lval[0][i] - 1]), lval.slice(1), rval[i]);
+                } else {
+                    for(i = 0; i < rval.length; i++) {
+                        assign(leftIndices.concat([lval[0][i] - 1]), lval.slice(1), rval[i]);
+                    }
                 }
             } else {
                 throw new Error("DOMAIN ERROR");
@@ -3107,7 +3113,8 @@
                                 name: funcName.attr,
                                 arg1: result.attr
                             },
-                            isFunc: true
+                            isFunc: true,
+                            funcValue: funcInfo.funcValue
                         }
                     };
                 } else {
@@ -3117,7 +3124,8 @@
                             func: {
                                 name: funcName.attr
                             },
-                            isFunc: true
+                            isFunc: true,
+                            funcValue: funcInfo.funcValue
                         }
                     };
                 }
@@ -3133,7 +3141,8 @@
                                 arg1: result.attr,
                                 arg2: result2.attr
                             },
-                            isFunc: true
+                            isFunc: true,
+                            funcValue: funcInfo.funcValue
                         }
                     };
                 } else {
@@ -3298,8 +3307,8 @@
         }
     }
 
-    function execAPL(program, innerEnv) {
-        var ASSIGN = /^[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*←/g,
+    function execAPL(program, innerEnv, isBranch) {
+        var ASSIGN = /^[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*(\[[^\]\n]*\])?←/g,
             converted,
             internal,
             result;
@@ -3310,8 +3319,10 @@
         }
         internal = parseAPL(converted, innerEnv);
         result = execInternal(internal, innerEnv);
-        if(!internal.isFunc && !ASSIGN.test(converted)) {
+        if(!internal.isFunc && !ASSIGN.test(converted) && !isBranch) {
             consoleLog(result);
+        } else if(internal.isFunc && internal.funcValue) {
+            consoleLog(innerEnv[internal.funcValue]);
         }
         return result;
     }
@@ -3343,7 +3354,7 @@
             } else if(program[0] === "→") {
                 var lineno;
 
-                lineno = execAPL(program.slice(1));
+                lineno = execAPL(program.slice(1), innerEnv, true);
                 if(Number.isSafeInteger(lineno)) {
                     pc = lineno;
                 } else if(Array.isArray(lineno) && lineno >= 0) {
@@ -3358,7 +3369,7 @@
                     throw new Error("DOMAIN ERROR");
                 }
             } else {
-                var r2 = execAPL(program, innerEnv);
+                var r2 = execAPL(program, innerEnv, false);
 
                 result = r2 !== null ? r2 : result;
                 pc++;
@@ -3370,6 +3381,9 @@
     function createFunction(programs, env) {
         var splitted,
             splittedName,
+            splittedValue,
+            tosplit,
+            funcValue = null,
             VARIABLE = /[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*/,
             LABEL = /^([\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*):/,
             matchLabel,
@@ -3387,7 +3401,17 @@
                 }
             }
             splitted = programs[0].slice(1).split(/[ \t　]*;[ \t　]*/);
-            splittedName = splitted[0].split(/[ 　]+/);
+            splittedValue = splitted[0].split(/←/);
+            if(splittedValue.length > 1) {
+                tosplit = splittedValue[1];
+                funcValue = splittedValue[0];
+                if(!VARIABLE.test(funcValue)) {
+                    throw new Error("SYNTAX ERROR");
+                }
+            } else {
+                tosplit = splittedValue[0];
+            }
+            splittedName = tosplit.split(/[ 　]+/);
             for(i = 1; i < splitted.length; i++) {
                 if(!VARIABLE.test(splitted[i])) {
                     throw new Error("SYNTAX ERROR");
@@ -3405,13 +3429,15 @@
                     arg1: splittedName[0],
                     arg2: splittedName[2],
                     locals: splitted.slice(1).concat(labels),
-                    body: programs.slice(1)
+                    body: programs.slice(1),
+                    funcValue: funcValue
                 };
             } else {
                 env["f." + splittedName[0]] = {
-                    arg1: splittedName[1],
+                    arg1: splittedName[1] || null,
                     locals: splitted.slice(1).concat(labels),
-                    body: programs.slice(1)
+                    body: programs.slice(1),
+                    funcValue: funcValue
                 };
             }
             return null;
@@ -3447,6 +3473,21 @@
 
             evalAll: function(program) {
                 return createFunction(program, innerEnv);
+            },
+
+            getEnv: function() {
+                return innerEnv;
+            },
+
+            setEnv: function(env) {
+                var i;
+
+                innerEnv = {};
+                for(i in env) {
+                    if(env.hasOwnProperty(i)) {
+                        innerEnv[i] = env[i];
+                    }
+                }
             }
         };
         return me;
