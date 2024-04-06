@@ -297,7 +297,7 @@
             }, isNumber);
         },
 
-        "〇": function(object1, object2) {
+        "○": function(object1, object2) {
             var fn;
 
             function fn0(x) {
