@@ -265,31 +265,31 @@ describe("KANAPL", function () {
         it("trigonometric functions", function() {
             var env = KANAPL();
 
-            ok(env, "0〇1 0.5 0", [0, Math.sqrt(0.75), 1]);
-            ok(env, "1〇1", Math.sin(1));
-            ok(env, "2〇1", Math.cos(1));
-            ok(env, "3〇1", Math.tan(1));
-            ok(env, "4〇1", Math.sqrt(2));
-            ok(env, "5〇1", Math.sinh(1));
-            ok(env, "6〇1", Math.cosh(1));
-            ok(env, "7〇1", Math.tanh(1));
-            ok(env, "￣1〇￣1 0.5 1", [Math.asin(-1), Math.asin(0.5), Math.asin(1)]);
-            ok(env, "￣2〇￣1 0.5 1", [Math.acos(-1), Math.acos(0.5), Math.acos(1)]);
-            ok(env, "￣3〇1", Math.atan(1));
-            ok(env, "￣4〇1 2", [0, Math.sqrt(3)]);
-            ok(env, "￣5〇1 2", [Math.asinh(1), Math.asinh(2)]);
-            ok(env, "￣6〇1 2", [Math.acosh(1), Math.acosh(2)]);
-            ok(env, "￣7〇1 2", [Math.atanh(1), Math.atanh(2)]);
-            ok(env, "1〇1 1 1", [Math.sin(1), Math.sin(1), Math.sin(1)]);
-            ok(env, "1〇2 3ρ1 1 1", [[Math.sin(1), Math.sin(1), Math.sin(1)], [Math.sin(1), Math.sin(1), Math.sin(1)]]);
+            ok(env, "0○1 0.5 0", [0, Math.sqrt(0.75), 1]);
+            ok(env, "1○1", Math.sin(1));
+            ok(env, "2○1", Math.cos(1));
+            ok(env, "3○1", Math.tan(1));
+            ok(env, "4○1", Math.sqrt(2));
+            ok(env, "5○1", Math.sinh(1));
+            ok(env, "6○1", Math.cosh(1));
+            ok(env, "7○1", Math.tanh(1));
+            ok(env, "￣1○￣1 0.5 1", [Math.asin(-1), Math.asin(0.5), Math.asin(1)]);
+            ok(env, "￣2○￣1 0.5 1", [Math.acos(-1), Math.acos(0.5), Math.acos(1)]);
+            ok(env, "￣3○1", Math.atan(1));
+            ok(env, "￣4○1 2", [0, Math.sqrt(3)]);
+            ok(env, "￣5○1 2", [Math.asinh(1), Math.asinh(2)]);
+            ok(env, "￣6○1 2", [Math.acosh(1), Math.acosh(2)]);
+            ok(env, "￣7○1 2", [Math.atanh(1), Math.atanh(2)]);
+            ok(env, "1○1 1 1", [Math.sin(1), Math.sin(1), Math.sin(1)]);
+            ok(env, "1○2 3ρ1 1 1", [[Math.sin(1), Math.sin(1), Math.sin(1)], [Math.sin(1), Math.sin(1), Math.sin(1)]]);
         });
 
         it("pi", function() {
             var env = KANAPL();
 
-            ok(env, "〇2", 2 * Math.PI);
-            ok(env, "〇2 3 4", [2 * Math.PI, 3 * Math.PI, 4 * Math.PI]);
-            ok(env, "〇2 3ρ2 3 4", [[2 * Math.PI, 3 * Math.PI, 4 * Math.PI], [2 * Math.PI, 3 * Math.PI, 4 * Math.PI]]);
+            ok(env, "○2", 2 * Math.PI);
+            ok(env, "○2 3 4", [2 * Math.PI, 3 * Math.PI, 4 * Math.PI]);
+            ok(env, "○2 3ρ2 3 4", [[2 * Math.PI, 3 * Math.PI, 4 * Math.PI], [2 * Math.PI, 3 * Math.PI, 4 * Math.PI]]);
         });
 
         it("factorial", function() {
@@ -375,9 +375,9 @@ describe("KANAPL", function () {
         it("logical not", function() {
             var env = KANAPL();
 
-            ok(env, "~3", 0);
-            ok(env, "~2 0 1", [0, 1, 0]);
-            ok(env, "~2 3ρ2 0 1", [[0, 1, 0], [0, 1, 0]]);
+            ok(env, "～3", 0);
+            ok(env, "～2 0 1", [0, 1, 0]);
+            ok(env, "～2 3ρ2 0 1", [[0, 1, 0], [0, 1, 0]]);
         });
     });
 
@@ -393,7 +393,7 @@ describe("KANAPL", function () {
             ok(env, "「/2 8 3", 8);
             ok(env, "」/2 8 3", 2);
             ok(env, "★/2 2 3", 256);
-            ok(env, "〇/1 2", Math.sin(2));
+            ok(env, "○/1 2", Math.sin(2));
             ok(env, "☆/3 10 1000", 1);
             ok(env, "!/2 3", 3);
             ok(env, "∧/2 0 3", 0);
@@ -459,7 +459,7 @@ describe("KANAPL", function () {
             ok(env, "2 8 3+.「3 4 6", 17);
             ok(env, "2 8 3+.」3 4 6", 9);
             ok(env, "1 2 3+.★3 2 1", 8);
-            ok(env, "1 2+.〇1 2", Math.sin(1) + Math.cos(2));
+            ok(env, "1 2+.○1 2", Math.sin(1) + Math.cos(2));
             ok(env, "2 4 8+.☆4 16 64", 6);
             ok(env, "2 3+.!3 4", 7);
             ok(env, "1 2 3+.∧2 0 3", 2);
@@ -479,7 +479,7 @@ describe("KANAPL", function () {
             ok(env, "2 8 3「.+3 4 6", 12);
             ok(env, "2 8 3」.+3 4 6", 5);
             ok(env, "1 2★.+1 2", 16);
-            ok(env, "1 2〇.+1 2", Math.cos(4));
+            ok(env, "1 2○.+1 2", Math.cos(4));
             ok(env, "6 6000☆.+4 4000", 4);
             ok(env, "1 2!.+1 2", 6);
             ok(env, "1 2 3∧.+3 2 1", 1);
@@ -510,7 +510,7 @@ describe("KANAPL", function () {
             ok(env, "1 2・.「1 2", [[1, 2], [2, 2]]);
             ok(env, "1 2・.」1 2", [[1, 1], [1, 2]]);
             ok(env, "1 2・.★1 2", [[1, 1], [2, 4]]);
-            ok(env, "1 2・.〇1 2", [[Math.sin(1), Math.sin(2)], [Math.cos(1), Math.cos(2)]]);
+            ok(env, "1 2・.○1 2", [[Math.sin(1), Math.sin(2)], [Math.cos(1), Math.cos(2)]]);
             ok(env, "2 4・.☆4 16", [[2, 4], [1, 2]]);
             ok(env, "1 2・.!3 4", [[3, 4], [3, 6]]);
             ok(env, "0 1・.∧0 1", [[0, 0], [0, 1]]);
@@ -968,7 +968,7 @@ describe("KANAPL", function () {
             ok(env, "#tri#E", []);
             ok(env, "?E", []);
             ok(env, "!E", []);
-            ok(env, "~E", []);
+            ok(env, "～E", []);
         });
 
         it("scalar function(dyadic)", function() {
@@ -1050,7 +1050,7 @@ describe("KANAPL", function () {
             ok(env, "「/E", 0);
             ok(env, "」/E", 0);
             ok(env, "★/E", 0);
-            ok(env, "〇/E", 0);
+            ok(env, "○/E", 0);
             ok(env, "☆/E", 0);
             ok(env, "!/E", 0);
             ok(env, "∧/E", 0);
@@ -1071,7 +1071,7 @@ describe("KANAPL", function () {
             ok(env, "「\\E", []);
             ok(env, "」\\E", []);
             ok(env, "★\\E", []);
-            ok(env, "〇\\E", []);
+            ok(env, "○\\E", []);
             ok(env, "☆\\E", []);
             ok(env, "!\\E", []);
             ok(env, "∧\\E", []);
@@ -1092,7 +1092,7 @@ describe("KANAPL", function () {
             ok(env, "E+.「E", 0);
             ok(env, "E+.」E", 0);
             ok(env, "E+.★E", 0);
-            ok(env, "E+.〇E", 0);
+            ok(env, "E+.○E", 0);
             ok(env, "E+.☆E", 0);
             ok(env, "E+.!E", 0);
             ok(env, "E+.∧E", 0);
@@ -1112,7 +1112,7 @@ describe("KANAPL", function () {
             ok(env, "E「.+E", 0);
             ok(env, "E」.+E", 0);
             ok(env, "E★.+E", 0);
-            ok(env, "E〇.+E", 0);
+            ok(env, "E○.+E", 0);
             ok(env, "E☆.+E", 0);
             ok(env, "E!.+E", 0);
             ok(env, "E∧.+E", 0);
@@ -1133,7 +1133,7 @@ describe("KANAPL", function () {
             ok(env, "E・.「E", []);
             ok(env, "E・.」E", []);
             ok(env, "E・.★E", []);
-            ok(env, "E・.〇E", []);
+            ok(env, "E・.○E", []);
             ok(env, "E・.☆E", []);
             ok(env, "E・.!E", []);
             ok(env, "E・.∧E", []);
@@ -1381,7 +1381,7 @@ describe("KANAPL", function () {
         it("prime number", function() {
             var env = KANAPL();
 
-            ok(env, "(~R∈R・.×R)/R←1↓ι10", [2, 3, 5, 7]);
+            ok(env, "(～R∈R・.×R)/R←1↓ι10", [2, 3, 5, 7]);
         });
 
         it("sorting", function() {

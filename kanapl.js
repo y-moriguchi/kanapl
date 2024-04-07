@@ -9,6 +9,7 @@
 (function(root) {
     var undef = void 0;
     var consoleLog = function(v) { };
+    var outputHook = function(v) { return v; };
     var $ = function(v) { console.log(v); return v; }
 
     /*
@@ -661,7 +662,7 @@
         "min": "」",
         "**": "★",
         "log": "☆",
-        "tri": "〇",
+        "tri": "○",
         ">=": "≧",
         "<=": "≦",
         "!=": "≠",
@@ -3132,6 +3133,7 @@
             } else {
                 result = walk(index, attr);
                 if(!!(funcName = parseRegex(VARIABLE, K, result.lastIndex, attr)) && env["f." + funcName.attr]) {
+                    funcInfo = env["f." + funcName.attr];
                     result2 = walk(skipBlankIndex(funcName.lastIndex), []);
                     return {
                         lastIndex: result2.lastIndex,
@@ -3311,18 +3313,23 @@
         var ASSIGN = /^[\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f][0-9\x41-\x5a\u25b3\u3040-\u309f\u30a0-\u30fa\u30fc-\u30fe\u4e00-\u9fff\uff10-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9f]*(\[[^\]\n]*\])?←/g,
             converted,
             internal,
-            result;
+            result,
+            value;
 
         converted = convertChar(program);
         if(converted === "") {
             return null;
         }
         internal = parseAPL(converted, innerEnv);
+        if(internal.funcValue) {
+            value = innerEnv[internal.funcValue];
+        }
         result = execInternal(internal, innerEnv);
         if(!internal.isFunc && !ASSIGN.test(converted) && !isBranch) {
-            consoleLog(result);
+            consoleLog(outputHook(result));
         } else if(internal.isFunc && internal.funcValue) {
-            consoleLog(innerEnv[internal.funcValue]);
+            consoleLog(outputHook(innerEnv[internal.funcValue]));
+            innerEnv[internal.funcValue] = value;
         }
         return result;
     }
@@ -3488,6 +3495,10 @@
                         innerEnv[i] = env[i];
                     }
                 }
+            },
+
+            setOutputHook: function(hookf) {
+                outputHook = hookf;
             }
         };
         return me;
